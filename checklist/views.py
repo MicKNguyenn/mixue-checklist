@@ -115,7 +115,6 @@ def compress_image(image_file):
     )
 
 def upload_report(request, item_id):
-
     if "store_id" not in request.session:
         return redirect("/")
 
@@ -128,33 +127,43 @@ def upload_report(request, item_id):
     )
 
     if request.method == "POST":
+        if "image" not in request.FILES:
+            return redirect("/dashboard/")
 
         now = timezone.localtime()
         report_date = now.date()
 
         # Logic xử lý ca đêm trước 3h sáng tính cho ngày hôm trước giữ nguyên của ông
         if now.hour < 3:
-            report_date = report_date - timedelta(
-                days=1
-            )
+            report_date = report_date - timedelta(days=1)
 
-        # 🛠️ FIX CHÍ MẠNG TẠI ĐÂY: Xóa sạch bản ghi lỗi cũ (nếu có) để giải phóng kẹt dữ liệu
+        # 🛠️ STEP 1: Xóa sạch bản ghi cũ của item này trong ngày để tránh rác database
         Report.objects.filter(
             store=store,
             item=item,
             report_date=report_date
         ).delete()
 
-        # Tiến hành nén ảnh bằng cấu hình InMemoryUploadedFile chuẩn mới
-        compressed_image = compress_image(
-            request.FILES["image"]
-        )
+        # 🛠️ STEP 2: Tiến hành nén ảnh từ request gửi lên
+        compressed_image = compress_image(request.FILES["image"])
 
-        # Tạo bản ghi mới tinh và đẩy ảnh thẳng lên kho Cloudinary
+        # 🛠️ STEP 3: FIX CHÍ MẠNG - Ép đổi tên file thành chuỗi ngẫu nhiên duy nhất (UUID)
+        # Lấy đuôi file gốc (ví dụ: .jpg, .png)
+        ext = os.path.splitext(request.FILES["image"].name)[1]
+        if not ext:
+            ext = '.jpg' # Phòng hờ điện thoại không gửi kèm đuôi file
+            
+        # Tạo tên mới tinh: mixue_a1b2c3d4e5.jpg
+        random_name = f"mixue_{uuid.uuid4().hex[:10]}{ext}"
+        
+        # Ghi đè cái tên ngẫu nhiên này vào file đã nén trước khi đẩy lên mây
+        compressed_image.name = random_name
+
+        # 🛠️ STEP 4: Tạo bản ghi mới tinh và đẩy ảnh bay thẳng lên kho Cloudinary
         Report.objects.create(
             store=store,
             item=item,
-            image=compressed_image,
+            image=compressed_image,  # File này giờ đã có tên độc nhất, không lo bị nghẽn đè!
             report_date=report_date
         )
 
