@@ -119,6 +119,16 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# Static files (CSS, JavaScript, Images)
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# THÊM ĐÚNG DÒNG NÀY VÀO ĐỂ KÍCH HOẠT WHITENOISE ĐỌC CSS KHI DEBUG=FALSE
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # Cloudinary & Local Storage Configuration
 if os.environ.get('CLOUDINARY_CLOUD_NAME'):
