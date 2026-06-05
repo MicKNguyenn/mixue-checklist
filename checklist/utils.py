@@ -7,7 +7,7 @@ def delete_old_reports():
 
     limit_date = (
         timezone.localdate()
-        - timedelta(days=5) #Chỗ xóa data 
+        - timedelta(days=2) #Chỗ xóa data 
     )
 
     old_reports = Report.objects.filter(
