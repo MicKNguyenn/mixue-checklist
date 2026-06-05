@@ -106,15 +106,8 @@ def compress_image(image_file):
     img.save(output, format="JPEG", quality=75)
     output.seek(0)
     
-    # Ép kiểu về InMemoryUploadedFile chuẩn chỉnh cho Cloudinary
-    return InMemoryUploadedFile(
-        output,
-        'ImageField',
-        image_file.name, 
-        'image/jpeg',
-        sys.getsizeof(output),
-        None
-    )
+    # Dùng ContentFile bọc lại mượt hơn, tự tối ưu hóa dung lượng cho Cloudinary bóc tách
+    return ContentFile(output.read())
 
 def upload_report(request, item_id):
     if "store_id" not in request.session:
@@ -130,30 +123,29 @@ def upload_report(request, item_id):
         now = timezone.localtime()
         report_date = now.date()
 
-        # Logic xử lý ca đêm trước 3h sáng tính cho ngày hôm trước của ông
         if now.hour < 3:
             report_date = report_date - timedelta(days=1)
 
-        # 1. Xóa sạch bản ghi cũ tránh rác database
+        # Xóa sạch bản ghi cũ tránh trùng lặp dữ liệu
         Report.objects.filter(
             store=store,
             item=item,
             report_date=report_date
         ).delete()
 
-        # 2. Băm tên file ngẫu nhiên TRƯỚC KHI NÉN để bọc lót an toàn cho InMemoryUploadedFile
+        # 1. Tiến hành nén ảnh qua ContentFile mới
+        compressed_image = compress_image(request.FILES["image"])
+
+        # 2. Băm tên file ngẫu nhiên gắn thẳng vào file đã nén
         ext = os.path.splitext(request.FILES["image"].name)[1]
         if not ext:
             ext = '.jpg'
         random_name = f"mixue_{uuid.uuid4().hex[:10]}{ext}"
         
-        # Ghi đè tên mới thẳng vào request.FILES gốc (Cách này an toàn tuyệt đối không bao giờ lo lỗi 500)
-        request.FILES["image"].name = random_name
+        # Đặt tên trực tiếp cho thực thể file nén
+        compressed_image.name = random_name
 
-        # 3. Tiến hành nén ảnh (Lúc này file sinh ra sẽ mang luôn tên ngẫu nhiên chuẩn chỉ)
-        compressed_image = compress_image(request.FILES["image"])
-
-        # 4. Tạo bản ghi mới tinh đẩy thẳng lên kho Cloudinary
+        # 3. Tạo bản ghi - Django Storage sẽ tự động bốc dữ liệu thật ném thẳng lên mây
         Report.objects.create(
             store=store,
             item=item,
