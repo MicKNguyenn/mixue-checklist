@@ -64,8 +64,4 @@ urlpatterns = [
     name="export_excel"
     ),
     
-    path(
-    "create-admin/",
-    create_admin
-    ),
 ]
