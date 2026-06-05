@@ -1,23 +1,33 @@
-import os
-import uuid
-import cloudinary
-import cloudinary.uploader
 from django.shortcuts import render, redirect
+from accounts.models import Store
+from datetime import datetime
 from django.utils import timezone
 from datetime import timedelta
+from .models import *
+from PIL import Image
 from django.core.files.base import ContentFile
 from io import BytesIO
-from PIL import Image
+from .utils import delete_old_reports
+from django.utils.dateparse import parse_date
+from django.http import JsonResponse
+from openpyxl import Workbook
+from openpyxl.styles import PatternFill
 from django.http import HttpResponse
-from .models import *
-from accounts.models import Store
-
-# CẤU HÌNH TRỰC TIẾP ĐỂ CHẮC CHẮN NÓ NHẬN DỮ LIỆU
-cloudinary.config( 
-  cloud_name = 'dxeanigzh', 
-  api_key = '389369466398985', 
-  api_secret = 'iP-kH0yU3y1-5aEwB41xR-oGZq4'
+from openpyxl.styles import (
+    Font,
+    PatternFill,
+    Alignment,
+    Border,
+    Side
 )
+from io import BytesIO
+from PIL import Image
+from django.core.files.uploadedfile import InMemoryUploadedFile
+import sys
+import os
+import uuid
+import cloudinary.uploader
+
 
 def dashboard(request):
     
@@ -88,16 +98,33 @@ def get_current_slot():
 
     return None
 
+from PIL import Image, UnidentifiedImageError
+
 def compress_image(image_file):
-    # Đọc ảnh từ file upload
-    img = Image.open(image_file)
-    img = img.convert("RGB")
-    img.thumbnail((1280, 1280))
-    
-    output = BytesIO()
-    img.save(output, format="JPEG", quality=75)
-    output.seek(0)
-    return output # Trả về BytesIO trực tiếp
+    try:
+        img = Image.open(image_file)
+
+        print("FORMAT =", img.format)
+
+        img = img.convert("RGB")
+        img.thumbnail((1280, 1280))
+
+        output = BytesIO()
+
+        img.save(
+            output,
+            format="JPEG",
+            quality=75
+        )
+
+        output.seek(0)
+
+        return ContentFile(output.read())
+
+    except UnidentifiedImageError:
+        raise Exception(
+            f"Không đọc được ảnh: {image_file.name}"
+        )
 
 def upload_report(request, item_id):
     if "store_id" not in request.session:
@@ -107,43 +134,76 @@ def upload_report(request, item_id):
     item = ChecklistItem.objects.get(id=item_id)
 
     if request.method == "POST":
-        if "image" not in request.FILES:
-            return redirect("/dashboard/")
-
-        now = timezone.localtime()
-        report_date = now.date()
-        if now.hour < 3:
-            report_date = report_date - timedelta(days=1)
-
-        # Xóa bản ghi cũ
-        Report.objects.filter(store=store, item=item, report_date=report_date).delete()
-
         try:
-            # 1. Nén ảnh
-            img_io = compress_image(request.FILES["image"])
-            
-            # 2. Upload thẳng lên Cloudinary
+            print("=== START UPLOAD ===")
+
+            if "image" not in request.FILES:
+                print("NO IMAGE")
+                return redirect("/dashboard/")
+
+            image_file = request.FILES["image"]
+
+            print("FILE NAME:", image_file.name)
+            print("CONTENT TYPE:", image_file.content_type)
+
+            now = timezone.localtime()
+            report_date = now.date()
+
+            if now.hour < 3:
+                report_date = report_date - timedelta(days=1)
+
+            Report.objects.filter(
+                store=store,
+                item=item,
+                report_date=report_date
+            ).delete()
+
             random_public_id = f"mixue_{uuid.uuid4().hex[:10]}"
+
+            print("COMPRESSING...")
+            compressed_image = compress_image(image_file)
+
+            print("UPLOADING TO CLOUDINARY...")
             upload_result = cloudinary.uploader.upload(
-                img_io,
+                compressed_image,
                 folder="reports",
                 public_id=random_public_id,
+                overwrite=True,
                 resource_type="image"
             )
 
-            # 3. Lưu URL vào DB
+            print("UPLOAD SUCCESS")
+
+            cloudinary_url = upload_result.get("secure_url")
+
+            print(cloudinary_url)
+
             Report.objects.create(
                 store=store,
                 item=item,
-                image=upload_result.get("secure_url"),
+                image = models.URLField(
+                    max_length=1000
+                )
                 report_date=report_date
             )
-            return redirect("/dashboard/")
-            
-        except Exception as e:
-            return HttpResponse(f"Lỗi Server (Cloudinary): {str(e)}", status=500)
 
-    return render(request, "checklist/upload.html", {"item": item})
+            print("DB SAVE SUCCESS")
+
+            return redirect("/dashboard/")
+
+        except Exception as e:
+            import traceback
+            print(traceback.format_exc())
+            return HttpResponse(
+                f"<pre>{traceback.format_exc()}</pre>",
+                status=500
+            )
+
+    return render(
+        request,
+        "checklist/upload.html",
+        {"item": item}
+    )
     
 def admin_dashboard(request):
 
