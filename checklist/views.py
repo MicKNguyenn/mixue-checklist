@@ -1,33 +1,23 @@
-from django.shortcuts import render, redirect
-from accounts.models import Store
-from datetime import datetime
-from django.utils import timezone
-from datetime import timedelta
-from .models import *
-from PIL import Image
-from django.core.files.base import ContentFile
-from io import BytesIO
-from .utils import delete_old_reports
-from django.utils.dateparse import parse_date
-from django.http import JsonResponse
-from openpyxl import Workbook
-from openpyxl.styles import PatternFill
-from django.http import HttpResponse
-from openpyxl.styles import (
-    Font,
-    PatternFill,
-    Alignment,
-    Border,
-    Side
-)
-from io import BytesIO
-from PIL import Image
-from django.core.files.uploadedfile import InMemoryUploadedFile
-import sys
 import os
 import uuid
+import cloudinary
 import cloudinary.uploader
+from django.shortcuts import render, redirect
+from django.utils import timezone
+from datetime import timedelta
+from django.core.files.base import ContentFile
+from io import BytesIO
+from PIL import Image
+from django.http import HttpResponse
+from .models import *
+from accounts.models import Store
 
+# CẤU HÌNH TRỰC TIẾP ĐỂ CHẮC CHẮN NÓ NHẬN DỮ LIỆU
+cloudinary.config( 
+  cloud_name = 'dxeanigzh', 
+  api_key = '389369466398985', 
+  api_secret = 'iP-kH0yU3y1-5aEwB41xR-oGZq4'
+)
 
 def dashboard(request):
     
@@ -99,6 +89,7 @@ def get_current_slot():
     return None
 
 def compress_image(image_file):
+    # Đọc ảnh từ file upload
     img = Image.open(image_file)
     img = img.convert("RGB")
     img.thumbnail((1280, 1280))
@@ -106,9 +97,7 @@ def compress_image(image_file):
     output = BytesIO()
     img.save(output, format="JPEG", quality=75)
     output.seek(0)
-    
-    # Dùng ContentFile bọc lại mượt hơn, tự tối ưu hóa dung lượng cho Cloudinary bóc tách
-    return ContentFile(output.read())
+    return output # Trả về BytesIO trực tiếp
 
 def upload_report(request, item_id):
     if "store_id" not in request.session:
@@ -123,56 +112,38 @@ def upload_report(request, item_id):
 
         now = timezone.localtime()
         report_date = now.date()
-
         if now.hour < 3:
             report_date = report_date - timedelta(days=1)
 
-        # 1. Xóa sạch bản ghi cũ trong ngày để tránh rác database
-        Report.objects.filter(
-            store=store,
-            item=item,
-            report_date=report_date
-        ).delete()
+        # Xóa bản ghi cũ
+        Report.objects.filter(store=store, item=item, report_date=report_date).delete()
 
-        # 2. Tạo tên file ngẫu nhiên duy nhất bằng UUID
-        ext = os.path.splitext(request.FILES["image"].name)[1]
-        if not ext:
-            ext = '.jpg'
-        # Tạo public_id (tên file trên Cloudinary không bao gồm đuôi)
-        random_public_id = f"mixue_{uuid.uuid4().hex[:10]}"
+        try:
+            # 1. Nén ảnh
+            img_io = compress_image(request.FILES["image"])
+            
+            # 2. Upload thẳng lên Cloudinary
+            random_public_id = f"mixue_{uuid.uuid4().hex[:10]}"
+            upload_result = cloudinary.uploader.upload(
+                img_io,
+                folder="reports",
+                public_id=random_public_id,
+                resource_type="image"
+            )
 
-        # 3. Tiến hành nén ảnh qua ContentFile
-        compressed_image = compress_image(request.FILES["image"])
+            # 3. Lưu URL vào DB
+            Report.objects.create(
+                store=store,
+                item=item,
+                image=upload_result.get("secure_url"),
+                report_date=report_date
+            )
+            return redirect("/dashboard/")
+            
+        except Exception as e:
+            return HttpResponse(f"Lỗi Server (Cloudinary): {str(e)}", status=500)
 
-        # 4. 🔥 BẮN THẲNG LÊN CLOUDINARY BẰNG UPLOADER SDK (Bọc lót chống 404)
-        upload_result = cloudinary.uploader.upload(
-            compressed_image,
-            folder="reports",
-            public_id=random_public_id,
-            overwrite=True,
-            resource_type="image"
-        )
-
-        # 5. Lấy cái URL xịn do Cloudinary trả về sau khi upload thành công
-        cloudinary_url = upload_result.get("secure_url")
-
-        # 6. Lưu vào Database (Gán cái URL chuẩn vào trường image)
-        Report.objects.create(
-            store=store,
-            item=item,
-            image=cloudinary_url, # Lưu thẳng link tuyệt đối, khỏi lo lỗi hiển thị HTML!
-            report_date=report_date
-        )
-
-        return redirect("/dashboard/")
-
-    return render(
-        request,
-        "checklist/upload.html",
-        {
-            "item": item
-        }
-    )
+    return render(request, "checklist/upload.html", {"item": item})
     
 def admin_dashboard(request):
 
