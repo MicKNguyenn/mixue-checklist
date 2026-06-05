@@ -27,7 +27,8 @@ import sys
 import os
 import uuid
 import cloudinary.uploader
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
+from django.views.decorators.http import require_POST
 
 
 def dashboard(request):
@@ -385,6 +386,7 @@ def manage_checklist(request):
         }
     )
     
+
 @require_POST
 def delete_item(request, item_id):
     item = get_object_or_404(ChecklistItem, id=item_id)
