@@ -145,5 +145,6 @@ cloudinary.config(
 
 MEDIA_URL = "https://res.cloudinary.com/dxeanigzh/"
 
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # Cấu hình ID mặc định giữ nguyên
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
