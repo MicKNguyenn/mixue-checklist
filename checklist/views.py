@@ -24,6 +24,8 @@ from io import BytesIO
 from PIL import Image
 from django.core.files.uploadedfile import InMemoryUploadedFile
 import sys
+import os
+import uuid
 
 
 def dashboard(request):
@@ -102,13 +104,13 @@ def compress_image(image_file):
     
     output = BytesIO()
     img.save(output, format="JPEG", quality=75)
-    output.seek(0) # Đưa con trỏ file về đầu dòng
+    output.seek(0)
     
-    # Ép kiểu về InMemoryUploadedFile chuẩn chỉnh cho Cloudinary bú nuốt mượt mà
+    # Ép kiểu về InMemoryUploadedFile chuẩn chỉnh cho Cloudinary
     return InMemoryUploadedFile(
         output,
         'ImageField',
-        image_file.name, # Giữ nguyên tên file động của ông
+        image_file.name, 
         'image/jpeg',
         sys.getsizeof(output),
         None
@@ -118,13 +120,8 @@ def upload_report(request, item_id):
     if "store_id" not in request.session:
         return redirect("/")
 
-    store = Store.objects.get(
-        id=request.session["store_id"]
-    )
-
-    item = ChecklistItem.objects.get(
-        id=item_id
-    )
+    store = Store.objects.get(id=request.session["store_id"])
+    item = ChecklistItem.objects.get(id=item_id)
 
     if request.method == "POST":
         if "image" not in request.FILES:
@@ -133,37 +130,34 @@ def upload_report(request, item_id):
         now = timezone.localtime()
         report_date = now.date()
 
-        # Logic xử lý ca đêm trước 3h sáng tính cho ngày hôm trước giữ nguyên của ông
+        # Logic xử lý ca đêm trước 3h sáng tính cho ngày hôm trước của ông
         if now.hour < 3:
             report_date = report_date - timedelta(days=1)
 
-        # 🛠️ STEP 1: Xóa sạch bản ghi cũ của item này trong ngày để tránh rác database
+        # 1. Xóa sạch bản ghi cũ tránh rác database
         Report.objects.filter(
             store=store,
             item=item,
             report_date=report_date
         ).delete()
 
-        # 🛠️ STEP 2: Tiến hành nén ảnh từ request gửi lên
-        compressed_image = compress_image(request.FILES["image"])
-
-        # 🛠️ STEP 3: FIX CHÍ MẠNG - Ép đổi tên file thành chuỗi ngẫu nhiên duy nhất (UUID)
-        # Lấy đuôi file gốc (ví dụ: .jpg, .png)
+        # 2. Băm tên file ngẫu nhiên TRƯỚC KHI NÉN để bọc lót an toàn cho InMemoryUploadedFile
         ext = os.path.splitext(request.FILES["image"].name)[1]
         if not ext:
-            ext = '.jpg' # Phòng hờ điện thoại không gửi kèm đuôi file
-            
-        # Tạo tên mới tinh: mixue_a1b2c3d4e5.jpg
+            ext = '.jpg'
         random_name = f"mixue_{uuid.uuid4().hex[:10]}{ext}"
         
-        # Ghi đè cái tên ngẫu nhiên này vào file đã nén trước khi đẩy lên mây
-        compressed_image.name = random_name
+        # Ghi đè tên mới thẳng vào request.FILES gốc (Cách này an toàn tuyệt đối không bao giờ lo lỗi 500)
+        request.FILES["image"].name = random_name
 
-        # 🛠️ STEP 4: Tạo bản ghi mới tinh và đẩy ảnh bay thẳng lên kho Cloudinary
+        # 3. Tiến hành nén ảnh (Lúc này file sinh ra sẽ mang luôn tên ngẫu nhiên chuẩn chỉ)
+        compressed_image = compress_image(request.FILES["image"])
+
+        # 4. Tạo bản ghi mới tinh đẩy thẳng lên kho Cloudinary
         Report.objects.create(
             store=store,
             item=item,
-            image=compressed_image,  # File này giờ đã có tên độc nhất, không lo bị nghẽn đè!
+            image=compressed_image,
             report_date=report_date
         )
 
