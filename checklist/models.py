@@ -38,9 +38,7 @@ class Report(models.Model):
         on_delete=models.CASCADE
     )
 
-    image = models.ImageField(
-        upload_to='reports/'
-    )
+    image = models.URLField(max_length=1000, blank=True, null=True)
 
     status = models.CharField(
         max_length=20,

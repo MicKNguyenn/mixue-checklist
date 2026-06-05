@@ -181,9 +181,7 @@ def upload_report(request, item_id):
             Report.objects.create(
                 store=store,
                 item=item,
-                image = models.URLField(
-                    max_length=1000
-                )
+                image=cloudinary_url, # Lưu biến chứa link string vào trường image
                 report_date=report_date
             )
 
