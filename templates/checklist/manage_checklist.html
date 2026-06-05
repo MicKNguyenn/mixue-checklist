@@ -113,19 +113,18 @@ body{
                     {{ item.title }}
                 </span>
 
-                <a
-                href="/delete-item/{{ item.id }}/"
-                class="btn btn-danger btn-sm"
+                <form method="POST"
+                    action="/delete-item/{{ item.id }}/"
+                    onsubmit="return confirm('Xóa mục này?');">
 
-                onclick="
-                return confirm(
-                'Xóa mục này?'
-                );
-                ">
+                    {% csrf_token %}
 
-                🗑️
+                    <button type="submit"
+                            class="btn btn-danger btn-sm">
+                        🗑️
+                    </button>
 
-                </a>
+                </form>
 
             </div>
 
