@@ -119,33 +119,22 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Static files (CSS, JavaScript, Images)
-STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+# ==============================================================================
+# CLOUDINARY STORAGE CONFIGURATION (GÁN CỨNG ĐỂ ÉP ĐẨY LÊN MÂY)
+# ==============================================================================
 
-# THÊM ĐÚNG DÒNG NÀY VÀO ĐỂ KÍCH HOẠT WHITENOISE ĐỌC CSS KHI DEBUG=FALSE
-STORAGES = {
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    },
+# 1. Ép Django sử dụng Cloudinary làm kho lưu trữ Media mặc định
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+# 2. Điền trực tiếp thông số tài khoản Cloudinary của ông vào đây
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': 'dxeanigzh',
+    'API_KEY': '936551848386457', # Tui lấy chuẩn API KEY từ ảnh màn hình trước của ông
+    'API_SECRET': 'ÔNG_ĐIỀN_MÃ_API_SECRET_CỦA_ÔNG_VÀO_ĐÂY', # Nhớ đổi chữ này thành mã bí mật của ông nha!
 }
 
-# Cloudinary & Local Storage Configuration
-if os.environ.get('CLOUDINARY_CLOUD_NAME'):
-    CLOUDINARY_STORAGE = {
-        'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'),
-        'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
-        'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET'),
-    }
-    # Khi chạy trên Render, dùng Cloudinary làm kho lưu trữ chính
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-    
-    # Gán URL chuẩn cho Cloudinary để render link động ra HTML
-    MEDIA_URL = f"https://res.cloudinary.com/{os.environ.get('CLOUDINARY_CLOUD_NAME')}/"
-else:
-    # Khi chạy ở máy cá nhân (Local), mới dùng ổ cứng máy
-    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
-    MEDIA_URL = '/media/'
-    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# 3. Đường dẫn URL chuẩn để render ảnh ra giao diện HTML cho QC xem
+MEDIA_URL = "https://res.cloudinary.com/dxeanigzh/"
 
+# Cấu hình ID mặc định giữ nguyên
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
