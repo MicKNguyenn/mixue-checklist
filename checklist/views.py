@@ -25,15 +25,21 @@ from django.http import HttpResponse
 
 def create_admin(request):
 
-    if not User.objects.filter(
-        username="admin"
-    ).exists():
+    user, created = User.objects.get_or_create(
+        username="admin",
+        defaults={
+            "email": "admin@gmail.com",
+            "is_staff": True,
+            "is_superuser": True,
+        }
+    )
 
-        User.objects.create_superuser(
-            "admin",
-            "admin@gmail.com",
-            "123456Aa@"
-        )
+    user.set_password("123456Aa@")
+    user.is_staff = True
+    user.is_superuser = True
+    user.save()
+
+    return HttpResponse("PASSWORD RESET")
 
     return HttpResponse(
         "ADMIN CREATED"
