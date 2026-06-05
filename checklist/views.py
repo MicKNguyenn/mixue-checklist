@@ -20,6 +20,10 @@ from openpyxl.styles import (
     Border,
     Side
 )
+from io import BytesIO
+from PIL import Image
+from django.core.files.uploadedfile import InMemoryUploadedFile
+import sys
 
 
 def dashboard(request):
@@ -92,24 +96,22 @@ def get_current_slot():
     return None
 
 def compress_image(image_file):
-
     img = Image.open(image_file)
-
     img = img.convert("RGB")
-
     img.thumbnail((1280, 1280))
-
+    
     output = BytesIO()
-
-    img.save(
+    img.save(output, format="JPEG", quality=75)
+    output.seek(0) # Đưa con trỏ file về đầu dòng
+    
+    # Ép kiểu về InMemoryUploadedFile chuẩn chỉnh cho Cloudinary bú nuốt mượt mà
+    return InMemoryUploadedFile(
         output,
-        format="JPEG",
-        quality=75
-    )
-
-    return ContentFile(
-        output.getvalue(),
-        name=image_file.name
+        'ImageField',
+        image_file.name, # Giữ nguyên tên file động của ông
+        'image/jpeg',
+        sys.getsizeof(output),
+        None
     )
 
 def upload_report(request, item_id):
