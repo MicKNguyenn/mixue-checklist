@@ -130,28 +130,27 @@ def upload_report(request, item_id):
     if request.method == "POST":
 
         now = timezone.localtime()
-
         report_date = now.date()
 
+        # Logic xử lý ca đêm trước 3h sáng tính cho ngày hôm trước giữ nguyên của ông
         if now.hour < 3:
-
             report_date = report_date - timedelta(
                 days=1
             )
 
-        exists = Report.objects.filter(
+        # 🛠️ FIX CHÍ MẠNG TẠI ĐÂY: Xóa sạch bản ghi lỗi cũ (nếu có) để giải phóng kẹt dữ liệu
+        Report.objects.filter(
             store=store,
             item=item,
             report_date=report_date
-        ).exists()
+        ).delete()
 
-        if exists:
-            return redirect("/dashboard/")
-
+        # Tiến hành nén ảnh bằng cấu hình InMemoryUploadedFile chuẩn mới
         compressed_image = compress_image(
             request.FILES["image"]
         )
 
+        # Tạo bản ghi mới tinh và đẩy ảnh thẳng lên kho Cloudinary
         Report.objects.create(
             store=store,
             item=item,
