@@ -130,24 +130,15 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 import os
-import json
 
-# Kiểm tra xem có cấu hình Google Drive trên Render không
-if os.environ.get('GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE_CONTENTS'):
-    DEFAULT_FILE_STORAGE = 'gdstorage.storage.GoogleDriveStorage'
-    
-    # Tạo file credentials tạm thời từ biến môi trường của Render
-    GD_KEY_FILE_PATH = os.path.join('/tmp', 'google_drive_key.json')
-    if not os.path.exists(GD_KEY_FILE_PATH):
-        with open(GD_KEY_FILE_PATH, 'w') as f:
-            f.write(os.environ.get('GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE_CONTENTS'))
-            
-    GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE_PATH = GD_KEY_FILE_PATH
-    GOOGLE_DRIVE_STORAGE_MEDIA_ROOT = os.environ.get('GOOGLE_DRIVE_FOLDER_ID') # ID thư mục Drive
+if os.environ.get('CLOUDINARY_CLOUD_NAME'):
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'),
+        'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
+        'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET'),
+    }
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 else:
-    # Nếu chạy ở máy cá nhân (Local) thì lưu ảnh vào máy như cũ
     DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
     MEDIA_URL = '/media/'
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
-CSRF_TRUSTED_ORIGINS = ['https://*.ngrok-free.dev']
