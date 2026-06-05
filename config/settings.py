@@ -120,20 +120,29 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # ==============================================================================
-# CLOUDINARY STORAGE CONFIGURATION (GÁN CỨNG ĐỂ ÉP ĐẨY LÊN MÂY)
+# CLOUDINARY STORAGE CONFIGURATION (GÁN THẲNG - LỖI MẠNG LÀ PHẢI BÁO)
 # ==============================================================================
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
-# 1. Ép Django sử dụng Cloudinary làm kho lưu trữ Media mặc định
+# Ép Django sử dụng Cloudinary làm kho lưu trữ Media mặc định
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
-# 2. Điền trực tiếp thông số tài khoản Cloudinary của ông vào đây
+# Cấu hình tài khoản lấy từ chính trang của ông
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': 'dxeanigzh',
-    'API_KEY': '936551848386457', # Tui lấy chuẩn API KEY từ ảnh màn hình trước của ông
-    'API_SECRET': 'ÔNG_ĐIỀN_MÃ_API_SECRET_CỦA_ÔNG_VÀO_ĐÂY', # Nhớ đổi chữ này thành mã bí mật của ông nha!
+    'API_KEY': '936551848386457', 
+    'API_SECRET': 'ÔNG_ĐIỀN_MÃ_API_SECRET_THẬT_CỦA_ÔNG', # Thay mã secret thật của ông vào đây
 }
 
-# 3. Đường dẫn URL chuẩn để render ảnh ra giao diện HTML cho QC xem
+cloudinary.config(
+    cloud_name = 'dxeanigzh',
+    api_key = '936551848386457',
+    api_secret = 'ÔNG_ĐIỀN_MÃ_API_SECRET_THẬT_CỦA_ÔNG', # Thay mã secret thật của ông vào đây
+    secure = True
+)
+
 MEDIA_URL = "https://res.cloudinary.com/dxeanigzh/"
 
 # Cấu hình ID mặc định giữ nguyên
