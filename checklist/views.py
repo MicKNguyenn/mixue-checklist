@@ -21,14 +21,23 @@ from openpyxl.styles import (
     Side
 )
 from django.contrib.auth.models import User
+from django.http import HttpResponse
 
-if not User.objects.filter(username="admin").exists():
-    User.objects.create_superuser(
-        "admin",
-        "vohokynguyen@gmail.com",
-        "2600"
+def create_admin(request):
+
+    if not User.objects.filter(
+        username="admin"
+    ).exists():
+
+        User.objects.create_superuser(
+            "admin",
+            "admin@gmail.com",
+            "123456Aa@"
+        )
+
+    return HttpResponse(
+        "ADMIN CREATED"
     )
-
 
 
 def dashboard(request):

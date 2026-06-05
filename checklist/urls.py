@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from checklist.views import *
 
 urlpatterns = [
 
@@ -61,5 +62,10 @@ urlpatterns = [
     "export-excel/",
     views.export_excel,
     name="export_excel"
+    ),
+    
+    path(
+    "create-admin/",
+    create_admin
     ),
 ]
