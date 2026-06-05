@@ -26,6 +26,7 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 import sys
 import os
 import uuid
+import cloudinary.uploader
 
 
 def dashboard(request):
@@ -126,30 +127,40 @@ def upload_report(request, item_id):
         if now.hour < 3:
             report_date = report_date - timedelta(days=1)
 
-        # Xóa sạch bản ghi cũ tránh trùng lặp dữ liệu
+        # 1. Xóa sạch bản ghi cũ trong ngày để tránh rác database
         Report.objects.filter(
             store=store,
             item=item,
             report_date=report_date
         ).delete()
 
-        # 1. Tiến hành nén ảnh qua ContentFile mới
-        compressed_image = compress_image(request.FILES["image"])
-
-        # 2. Băm tên file ngẫu nhiên gắn thẳng vào file đã nén
+        # 2. Tạo tên file ngẫu nhiên duy nhất bằng UUID
         ext = os.path.splitext(request.FILES["image"].name)[1]
         if not ext:
             ext = '.jpg'
-        random_name = f"mixue_{uuid.uuid4().hex[:10]}{ext}"
-        
-        # Đặt tên trực tiếp cho thực thể file nén
-        compressed_image.name = random_name
+        # Tạo public_id (tên file trên Cloudinary không bao gồm đuôi)
+        random_public_id = f"mixue_{uuid.uuid4().hex[:10]}"
 
-        # 3. Tạo bản ghi - Django Storage sẽ tự động bốc dữ liệu thật ném thẳng lên mây
+        # 3. Tiến hành nén ảnh qua ContentFile
+        compressed_image = compress_image(request.FILES["image"])
+
+        # 4. 🔥 BẮN THẲNG LÊN CLOUDINARY BẰNG UPLOADER SDK (Bọc lót chống 404)
+        upload_result = cloudinary.uploader.upload(
+            compressed_image,
+            folder="reports",
+            public_id=random_public_id,
+            overwrite=True,
+            resource_type="image"
+        )
+
+        # 5. Lấy cái URL xịn do Cloudinary trả về sau khi upload thành công
+        cloudinary_url = upload_result.get("secure_url")
+
+        # 6. Lưu vào Database (Gán cái URL chuẩn vào trường image)
         Report.objects.create(
             store=store,
             item=item,
-            image=compressed_image,
+            image=cloudinary_url, # Lưu thẳng link tuyệt đối, khỏi lo lỗi hiển thị HTML!
             report_date=report_date
         )
 
