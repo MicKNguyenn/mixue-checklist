@@ -133,13 +133,13 @@ DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': 'dxeanigzh',
     'API_KEY': '936551848386457', 
-    'API_SECRET': 'ÔNG_ĐIỀN_MÃ_API_SECRET_THẬT_CỦA_ÔNG', # Thay mã secret thật của ông vào đây
+    'API_SECRET': 'dk_REyFV3N99iqMtuTAzVrldr0s', # Thay mã secret thật của ông vào đây
 }
 
 cloudinary.config(
     cloud_name = 'dxeanigzh',
     api_key = '936551848386457',
-    api_secret = 'ÔNG_ĐIỀN_MÃ_API_SECRET_THẬT_CỦA_ÔNG', # Thay mã secret thật của ông vào đây
+    api_secret = 'dk_REyFV3N99iqMtuTAzVrldr0s', # Thay mã secret thật của ông vào đây
     secure = True
 )
 
