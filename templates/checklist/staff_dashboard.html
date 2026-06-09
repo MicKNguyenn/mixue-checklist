@@ -109,7 +109,7 @@
     <div class="card shadow-sm mb-3 overflow-hidden">
         
         {% if issue.image %}
-        <img src="{{ issue.image.url }}" class="issue-img">
+        <img src="{{ issue.image }}" class="issue-img">
         {% endif %}
 
         <div class="card-body p-3">
@@ -134,7 +134,7 @@
                     <div class="text-success small fw-bold mb-1 d-flex align-items-center">
                         <span class="me-1">📸</span> Ảnh khắc phục hiện tại:
                     </div>
-                    <img src="{{ issue.fix_image.url }}" class="fix-img border mb-2">
+                    <img src="{{ issue.fix_image }}" class="fix-img border mb-2">
                 {% else %}
                     <div class="text-muted small mb-2 d-flex align-items-center" style="font-size: 12px;">
                         <span class="me-1">⚪</span> Chưa có ảnh khắc phục được gửi
