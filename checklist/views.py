@@ -29,6 +29,7 @@ import uuid
 import cloudinary.uploader
 from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_POST
+from django.contrib.auth import authenticate, login
 
 
 def dashboard(request):
@@ -207,6 +208,8 @@ def upload_report(request, item_id):
     
 def admin_dashboard(request):
 
+    if not request.user.is_staff:
+        return redirect("/")    
     today = timezone.now().date()
 
     return render(
@@ -219,6 +222,9 @@ def admin_dashboard(request):
     
 def admin_day(request, date):
 
+    if not request.user.is_staff:
+        return redirect("/")
+    
     selected_date = datetime.strptime(
         date,
         "%Y-%m-%d"
@@ -291,6 +297,8 @@ def admin_day(request, date):
     
 def admin_store(request, store_id, date):
 
+    if not request.user.is_staff:
+        return redirect("/")
     selected_date = datetime.strptime(date, "%Y-%m-%d").date()
 
     # =========================
@@ -362,6 +370,8 @@ def admin_store(request, store_id, date):
 
 def manage_checklist(request):
 
+    if not request.user.is_staff:
+        return redirect("/")
     if request.method == "POST":
 
         slot_id = request.POST.get("slot_id")
@@ -472,7 +482,9 @@ def history(request):
     )
     
 def export_excel(request):
-
+    if not request.user.is_staff:
+        return redirect("/")
+    
     if request.method != "POST":
 
         return redirect(
@@ -736,3 +748,56 @@ def export_excel(request):
     wb.save(response)
 
     return response
+
+def login_view(request):
+
+    if request.method == "POST":
+
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+
+        # ======================
+        # ADMIN DJANGO
+        # ======================
+        user = authenticate(
+            request,
+            username=username,
+            password=password
+        )
+
+        if user is not None and user.is_staff:
+
+            login(request, user)
+
+            today = timezone.localdate()
+
+            return redirect(
+                f"/admin-day/{today}/"
+            )
+
+        # ======================
+        # STORE
+        # ======================
+        store = Store.objects.filter(
+            code=username,
+            password=password
+        ).first()
+
+        if store:
+
+            request.session["store_id"] = store.id
+
+            return redirect("/dashboard/")
+
+        return render(
+            request,
+            "login.html",
+            {
+                "error": "Sai tài khoản hoặc mật khẩu"
+            }
+        )
+
+    return render(
+        request,
+        "login.html"
+    )

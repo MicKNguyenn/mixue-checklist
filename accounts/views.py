@@ -1,5 +1,9 @@
 from django.shortcuts import render, redirect
 from .models import Store
+from django.contrib.auth import authenticate, login
+from django.utils import timezone
+from .models import Store
+
 
 def login_view(request):
 
@@ -10,6 +14,24 @@ def login_view(request):
         code = request.POST.get("code")
         password = request.POST.get("password")
 
+        # Ưu tiên check admin trước
+        user = authenticate(
+            request,
+            username=code,
+            password=password
+        )
+
+        if user and user.is_staff:
+
+            login(request, user)
+
+            today = timezone.localdate()
+
+            return redirect(
+                f"/admin-day/{today}/"
+            )
+
+        # Nếu không phải admin thì check cửa hàng
         try:
 
             store = Store.objects.get(
@@ -21,15 +43,14 @@ def login_view(request):
 
             return redirect("/dashboard/")
 
-        except:
-            error = "Sai mã CH hoặc mật khẩu"
+        except Store.DoesNotExist:
+
+            error = "Sai tài khoản hoặc mật khẩu"
 
     return render(
         request,
         "accounts/login.html",
-        {
-            "error": error
-        }
+        {"error": error}
     )
 def logout_view(request):
 
