@@ -810,7 +810,7 @@ def audit_create(request):
 
     if not request.user.is_staff:
         return redirect("/")
-        
+
     stores = Store.objects.all()
 
     if request.method == "POST":
@@ -823,22 +823,28 @@ def audit_create(request):
         audit = Audit.objects.create(
             store=store,
             score=int(score),
-            user=request.user if request.user.is_authenticated else None
+            user=request.user
         )
 
         i = 1
 
         while True:
 
-            image = request.FILES.get(f"image_{i}")
+            image_file = request.FILES.get(f"image_{i}")
             note = request.POST.get(f"note_{i}")
 
-            if not image and not note:
+            if not image_file and not note:
                 break
+
+            image_url = None
+
+            if image_file:
+                upload = cloudinary.uploader.upload(image_file)
+                image_url = upload["secure_url"]
 
             AuditIssue.objects.create(
                 audit=audit,
-                image=image,
+                image=image_url,
                 note=note
             )
 
@@ -846,13 +852,9 @@ def audit_create(request):
 
         return redirect(f"/audit/{audit.id}/")
 
-    return render(
-        request,
-        "checklist/audit_create.html",
-        {
-            "stores": stores
-        }
-    )
+    return render(request, "checklist/audit_create.html", {
+        "stores": stores
+    })
     
 def audit_detail(request, id):
 
@@ -926,11 +928,18 @@ def staff_dashboard(request):
     })
     
 def staff_fix_issue(request, id):
+
     issue = get_object_or_404(AuditIssue, id=id)
 
     if request.method == "POST":
-        if request.FILES.get("fix_image"):
-            issue.fix_image = request.FILES["fix_image"]
+
+        fix_file = request.FILES.get("fix_image")
+
+        if fix_file:
+
+            upload = cloudinary.uploader.upload(fix_file)
+
+            issue.fix_image = upload["secure_url"]
             issue.status = "fixed"
             issue.save()
 

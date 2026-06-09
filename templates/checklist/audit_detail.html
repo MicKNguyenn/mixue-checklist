@@ -84,7 +84,7 @@
     <div class="card shadow-sm mb-3 issue-card">
 
         {% if issue.image %}
-        <img src="{{ issue.image.url }}" class="issue-img">
+        <img src="{{ issue.image }}" class="img-fluid">
         {% endif %}
 
         <div class="card-body">
@@ -117,7 +117,7 @@
                     <div class="text-success small fw-bold mb-1">
                         Ảnh khắc phục:
                     </div>
-                    <img src="{{ issue.fix_image.url }}" class="img-fluid rounded">
+                    <img src="{{ issue.fix_image }}" class="img-fluid">
                 {% else %}
                     <div class="text-danger small">
                         Chưa có ảnh khắc phục

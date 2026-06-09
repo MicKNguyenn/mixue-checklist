@@ -88,14 +88,14 @@ class AuditIssue(models.Model):
         related_name="issues"
     )
 
-    image = models.ImageField(upload_to="audit/")  # ảnh lỗi
+    image = models.URLField(max_length=1000, blank=True, null=True) # ảnh lỗi
 
     title = models.CharField(max_length=255, blank=True, null=True)
 
     note = models.TextField(blank=True, null=True)
 
     # 👉 ảnh khắc phục của nhân viên
-    fix_image = models.ImageField(upload_to="audit/fix/", blank=True, null=True)
+    fix_image = models.URLField(max_length=1000, blank=True, null=True)
 
     # 👉 trạng thái QC đánh giá lại
     status = models.CharField(
