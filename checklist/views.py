@@ -30,6 +30,10 @@ import cloudinary.uploader
 from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_POST
 from django.contrib.auth import authenticate, login
+from .models import Audit, AuditIssue
+from django.core.paginator import Paginator
+from django.contrib import messages
+from django.db.models import Q, Exists, OuterRef  
 
 
 def dashboard(request):
@@ -801,3 +805,164 @@ def login_view(request):
         request,
         "login.html"
     )
+    
+def audit_create(request):
+
+    if not request.user.is_staff:
+        return redirect("/")
+        
+    stores = Store.objects.all()
+
+    if request.method == "POST":
+
+        store_id = request.POST.get("store_id")
+        score = request.POST.get("score")
+
+        store = Store.objects.get(id=store_id)
+
+        audit = Audit.objects.create(
+            store=store,
+            score=int(score),
+            user=request.user if request.user.is_authenticated else None
+        )
+
+        i = 1
+
+        while True:
+
+            image = request.FILES.get(f"image_{i}")
+            note = request.POST.get(f"note_{i}")
+
+            if not image and not note:
+                break
+
+            AuditIssue.objects.create(
+                audit=audit,
+                image=image,
+                note=note
+            )
+
+            i += 1
+
+        return redirect(f"/audit/{audit.id}/")
+
+    return render(
+        request,
+        "checklist/audit_create.html",
+        {
+            "stores": stores
+        }
+    )
+    
+def audit_detail(request, id):
+
+    if not request.user.is_staff:
+        return redirect("/")
+
+    audit = get_object_or_404(Audit, id=id)
+
+    # 👉 lấy issue đầu tiên theo status
+    first_issue = audit.issues.order_by("status").first()
+
+    return render(
+        request,
+        "checklist/audit_detail.html",
+        {
+            "audit": audit,
+            "first_issue": first_issue
+        }
+    )
+    
+
+def audit_list(request):
+
+    if not request.user.is_staff:
+        return redirect("/")
+
+    audits = Audit.objects.all().order_by("-created_at")
+
+    search = request.GET.get("search")
+
+    if search:
+        audits = audits.filter(store__code__icontains=search)
+
+    # ✔ CHECK có issue pending hay không
+    audits = audits.annotate(
+        is_pending=Exists(
+            AuditIssue.objects.filter(
+                audit_id=OuterRef("id"),
+                status="pending"
+            )
+        )
+    )
+
+    paginator = Paginator(audits, 10)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, "checklist/audit_list.html", {
+        "page_obj": page_obj,
+        "search": search
+    })
+    
+    
+def delete_audit(request, id):
+
+    audit = get_object_or_404(Audit, id=id)
+
+    if request.method == "POST":
+        audit.delete()
+        messages.success(request, "Đã xoá audit thành công")
+        return redirect("audit_list")
+
+    return redirect("audit_list")
+
+def staff_dashboard(request):
+    # lấy audit mới nhất hoặc theo logic bạn muốn
+    audit = Audit.objects.order_by("-id").first()
+
+    return render(request, "checklist/staff_dashboard.html", {
+        "audit": audit
+    })
+    
+def staff_fix_issue(request, id):
+    issue = get_object_or_404(AuditIssue, id=id)
+
+    if request.method == "POST":
+        if request.FILES.get("fix_image"):
+            issue.fix_image = request.FILES["fix_image"]
+            issue.status = "fixed"
+            issue.save()
+
+            return JsonResponse({"success": True})
+
+    return JsonResponse({"success": False})
+    
+def review_issue(request, audit_id, issue_id):
+
+    issue = get_object_or_404(AuditIssue, id=issue_id, audit_id=audit_id)
+
+    if request.method == "POST":
+        status = request.POST.get("status")  # pass / fail
+
+        issue.status = status
+        issue.save()
+
+    return redirect(f"/audit/{audit_id}/")
+
+def audit_review_issue(request, audit_id, issue_id):
+
+    if request.method != "POST":
+        return JsonResponse({"success": False})
+
+    issue = AuditIssue.objects.get(id=issue_id, audit_id=audit_id)
+
+    status = request.POST.get("status")
+    note = request.POST.get("note")
+
+    issue.status = status
+    issue.note = note
+    issue.reviewed_at = timezone.now()
+    issue.save()
+
+    return JsonResponse({"success": True})

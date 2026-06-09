@@ -1,6 +1,6 @@
 from django.db import models
 from accounts.models import Store
-
+from django.contrib.auth.models import User
 
 class TimeSlot(models.Model):
 
@@ -73,3 +73,40 @@ class Report(models.Model):
     null=True,
     blank=True
     )
+
+class Audit(models.Model):
+    store = models.ForeignKey(Store, on_delete=models.CASCADE)
+    score = models.IntegerField()
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+class AuditIssue(models.Model):
+
+    audit = models.ForeignKey(
+        Audit,
+        on_delete=models.CASCADE,
+        related_name="issues"
+    )
+
+    image = models.ImageField(upload_to="audit/")  # ảnh lỗi
+
+    title = models.CharField(max_length=255, blank=True, null=True)
+
+    note = models.TextField(blank=True, null=True)
+
+    # 👉 ảnh khắc phục của nhân viên
+    fix_image = models.ImageField(upload_to="audit/fix/", blank=True, null=True)
+
+    # 👉 trạng thái QC đánh giá lại
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ("pending", "Chờ xử lý"),
+            ("fixed", "Đã khắc phục"),
+            ("pass", "Đạt"),
+            ("fail", "Không đạt"),
+        ],
+        default="pending"
+    )
+
+    reviewed_at = models.DateTimeField(null=True, blank=True)

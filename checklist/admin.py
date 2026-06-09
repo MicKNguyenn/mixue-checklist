@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import *
 from django.utils.html import format_html
-
+from .models import Audit
 
 @admin.register(Report)
 class ReportAdmin(admin.ModelAdmin):
@@ -23,6 +23,8 @@ class ReportAdmin(admin.ModelAdmin):
 
         return "-"
 
+
+admin.site.register(Audit)
 
 admin.site.register(TimeSlot)
 admin.site.register(ChecklistItem)

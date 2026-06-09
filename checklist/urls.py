@@ -64,4 +64,54 @@ urlpatterns = [
     name="export_excel"
     ),
     
+    path(
+    "audit-create/",
+    views.audit_create,
+    name="audit_create"
+    ),
+    
+    path("audit/<int:id>/", 
+    views.audit_detail,
+    name="audit_detail"
+    ),
+    
+    path(
+    "audits/",
+    views.audit_list,
+    name="audit_list"
+    ),
+    
+    path(
+    "audit-delete/<int:id>/",
+    views.delete_audit,
+    name="delete_audit"
+    ),
+    
+    path("staff/",
+    views.staff_dashboard,
+    name="staff_dashboard"
+    ),
+    
+    path(
+    "audit/<int:audit_id>/review/<int:issue_id>/",
+    views.review_issue,
+    name="review_issue"
+    ),
+    
+    path(
+    "audit/<int:audit_id>/review/<int:issue_id>/",
+    views.audit_review_issue,
+    name="audit_review_issue"
+    ),
+    
+    path("staff/",
+    views.staff_dashboard,
+    name="staff_dashboard"
+    ),
+    path("staff/issue/<int:id>/fix/",
+    views.staff_fix_issue,
+    name="staff_fix"
+    ),
+    
 ]
+    
