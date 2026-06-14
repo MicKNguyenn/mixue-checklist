@@ -75,7 +75,7 @@
 <body>
 
 <div class="phone-container">
-
+    {% if audit %}
     <div class="card shadow-sm mb-3">
         <div class="card-body p-3">
             <h6 class="fw-bold text-primary mb-3 d-flex align-items-center">
@@ -166,12 +166,12 @@
                             📷 Bấm để chụp hoặc chọn ảnh mới
                         </label>
                         <input id="file-{{ issue.id }}" 
-                               type="file" 
-                               name="fix_image" 
-                               class="d-none" 
-                               accept="image/*" 
-                               required 
-                               onchange="updateFileName(this)">
+                            type="file" 
+                            name="fix_image" 
+                            class="d-none" 
+                            accept="image/*" 
+                            required 
+                            onchange="updateFileName(this)">
                         <div class="file-name-preview text-primary text-center small mt-1 fw-bold"></div>
                     </div>
 
@@ -197,7 +197,15 @@
     </div>
 
 </div>
+    {% else %}
 
+    <div class="alert alert-success text-center mt-5">
+
+        Chưa có đánh giá QC
+
+    </div>
+
+    {% endif %}
 <script>
 // Hiển thị tên file tạm thời sau khi nhân viên chọn ảnh/chụp ảnh xong
 function updateFileName(input) {

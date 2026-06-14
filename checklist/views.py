@@ -836,15 +836,16 @@ def audit_create(request):
             if not image_file and not note:
                 break
 
-            image_url = None
+            # Không cho tạo lỗi nếu chưa có ảnh
+            if not image_file:
+                i += 1
+                continue
 
-            if image_file:
-                upload = cloudinary.uploader.upload(image_file)
-                image_url = upload["secure_url"]
+            upload = cloudinary.uploader.upload(image_file)
 
             AuditIssue.objects.create(
                 audit=audit,
-                image=image_url,
+                image=upload["secure_url"],
                 note=note
             )
 
@@ -920,32 +921,42 @@ def delete_audit(request, id):
     return redirect("audit_list")
 
 def staff_dashboard(request):
-    # lấy audit mới nhất hoặc theo logic bạn muốn
-    audit = Audit.objects.order_by("-id").first()
 
-    return render(request, "checklist/staff_dashboard.html", {
-        "audit": audit
-    })
+    if "store_id" not in request.session:
+        return redirect("/")
+
+    store = Store.objects.get(
+        id=request.session["store_id"]
+    )
+
+    audit = Audit.objects.filter(
+        store=store
+    ).order_by(
+        "-created_at"
+    ).first()
+
+    return render(
+        request,
+        "checklist/staff_dashboard.html",
+        {
+            "audit": audit
+        }
+    )
     
 def staff_fix_issue(request, id):
 
-    issue = get_object_or_404(AuditIssue, id=id)
+    if "store_id" not in request.session:
+        return JsonResponse({"success": False})
 
-    if request.method == "POST":
+    store = Store.objects.get(
+        id=request.session["store_id"]
+    )
 
-        fix_file = request.FILES.get("fix_image")
-
-        if fix_file:
-
-            upload = cloudinary.uploader.upload(fix_file)
-
-            issue.fix_image = upload["secure_url"]
-            issue.status = "fixed"
-            issue.save()
-
-            return JsonResponse({"success": True})
-
-    return JsonResponse({"success": False})
+    issue = get_object_or_404(
+        AuditIssue,
+        id=id,
+        audit__store=store
+    )
     
 def review_issue(request, audit_id, issue_id):
 
