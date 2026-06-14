@@ -891,13 +891,30 @@ def audit_list(request):
 
     # ✔ CHECK có issue pending hay không
     audits = audits.annotate(
+
         is_pending=Exists(
             AuditIssue.objects.filter(
                 audit_id=OuterRef("id"),
                 status="pending"
             )
+        ),
+
+        has_fail=Exists(
+            AuditIssue.objects.filter(
+                audit_id=OuterRef("id"),
+                status="fail"
+            )
+        ),
+
+        need_review=Exists(
+            AuditIssue.objects.filter(
+                audit_id=OuterRef("id"),
+                status="fixed"
+            )
         )
     )
+
+
 
     paginator = Paginator(audits, 10)
     page_number = request.GET.get("page")

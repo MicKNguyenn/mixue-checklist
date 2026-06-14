@@ -41,19 +41,35 @@
                     </div>
 
                     {% if audit.issues.all|length == 0 %}
+
                         <span class="badge bg-secondary">
                             ⏳ Chưa có dữ liệu
                         </span>
 
+                    {% elif audit.need_review %}
+
+                        <span class="badge bg-danger">
+                            🔔 Có ảnh khắc phục mới
+                        </span>
+
                     {% elif audit.is_pending %}
+
                         <span class="badge bg-warning text-dark">
-                            🔔 Chưa đánh giá
+                            ⏳ Chưa đánh giá
+                        </span>
+
+                    {% elif audit.has_fail %}
+
+                        <span class="badge bg-danger">
+                            ❌ Có lỗi chưa đạt
                         </span>
 
                     {% else %}
+
                         <span class="badge bg-success">
-                            ✔ Đã đánh giá
+                            ✔ Hoàn tất
                         </span>
+
                     {% endif %}
 
                 </div>
