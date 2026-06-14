@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 
@@ -13,7 +14,7 @@
 <style>
 
 body{
-    background:#f2f4f7;
+    background:linear-gradient(to bottom,#ffebee,#ffffff);
     min-height:100vh;
 }
 
@@ -21,6 +22,7 @@ body{
 
     max-width:430px;
     margin:auto;
+
     min-height:100vh;
 
     display:flex;
@@ -36,20 +38,20 @@ body{
 
     background:white;
 
-    border-radius:20px;
+    border-radius:28px;
 
-    padding:25px;
+    padding:30px 25px;
 
     box-shadow:
-    0 10px 30px rgba(0,0,0,.08);
+    0 15px 40px rgba(0,0,0,.10);
 }
 
 .logo{
 
-    width:90px;
-    height:90px;
+    width:95px;
+    height:95px;
 
-    background:#0d6efd;
+    background:#e60012;
 
     border-radius:50%;
 
@@ -60,9 +62,12 @@ body{
 
     margin:auto;
 
-    font-size:40px;
+    font-size:42px;
 
     color:white;
+
+    box-shadow:
+    0 8px 20px rgba(230,0,18,.25);
 }
 
 .title{
@@ -71,45 +76,98 @@ body{
 
     font-weight:700;
 
-    margin-top:15px;
+    color:#e60012;
 
-    margin-bottom:5px;
+    margin-top:18px;
+
+    margin-bottom:8px;
 }
 
 .subtitle{
 
     text-align:center;
 
-    color:gray;
+    color:#888;
 
-    margin-bottom:25px;
+    margin-bottom:28px;
+
+    font-size:15px;
+}
+
+.form-label{
+
+    font-weight:600;
 }
 
 .form-control{
 
-    height:50px;
+    height:55px;
 
-    border-radius:12px;
+    border-radius:15px;
+
+    border:1px solid #ddd;
+}
+
+.form-control:focus{
+
+    border-color:#e60012;
+
+    box-shadow:
+    0 0 0 .2rem rgba(230,0,18,.15);
 }
 
 .btn-login{
 
-    height:50px;
+    height:55px;
 
-    border-radius:12px;
+    border-radius:15px;
 
-    font-weight:600;
+    background:#e60012;
+
+    border:none;
+
+    font-weight:700;
+
+    font-size:17px;
+}
+
+.btn-login:hover{
+
+    background:#c70010;
+}
+
+.alert{
+
+    border-radius:15px;
 }
 
 .version{
 
     text-align:center;
 
-    color:gray;
+    color:#999;
 
     font-size:13px;
 
-    margin-top:20px;
+    margin-top:25px;
+}
+
+.version span{
+
+    color:#e60012;
+
+    font-weight:700;
+}
+
+.copyright{
+
+    margin-top:5px;
+
+    text-align:center;
+
+    font-size:12px;
+
+    color:#bbb;
 }
 
 </style>
@@ -127,7 +185,7 @@ body{
         </div>
 
         <h3 class="title">
-            Checklist vệ sinh
+            MIXUE CHECKLIST
         </h3>
 
         <p class="subtitle">
@@ -170,7 +228,7 @@ body{
             </div>
 
             <button
-            class="btn btn-primary w-100 btn-login">
+            class="btn btn-login w-100">
 
                 Đăng nhập
 
@@ -186,10 +244,16 @@ body{
 
         <div class="version">
 
-            Version 1.0 by NGUYEN
+            Version <span>2.0</span> by <span>NGUYEN</span>
 
         </div>
-        
+
+        <div class="copyright">
+
+            Mixue Store Checklist System
+
+        </div>
+
     </div>
 
 </div>
@@ -197,3 +261,4 @@ body{
 </body>
 
 </html>
+

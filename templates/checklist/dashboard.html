@@ -19,6 +19,37 @@ body{
     background:#f2f4f7;
 }
 
+.header{
+
+    background:#e60012;
+
+    color:white;
+
+    padding:22px;
+
+    border-radius:25px;
+
+    box-shadow:
+    0 10px 25px rgba(230,0,18,.25);
+
+}
+
+.active-slot{
+
+    border:2px solid #e60012;
+
+    background:#fff1f1;
+
+}
+
+.card{
+
+    border:none;
+
+    border-radius:18px;
+
+}
+
 .phone{
 
     max-width:430px;
@@ -27,27 +58,9 @@ body{
 
     margin:auto;
 
-    background:white;
+    background:#f7f8fa;
 
-    padding:20px;
-}
-
-.header{
-
-    background:#0d6efd;
-
-    color:white;
-
-    padding:20px;
-
-    border-radius:20px;
-}
-
-.active-slot{
-
-    border:2px solid #198754;
-
-    background:#eafaf1;
+    padding:15px;
 
 }
 
@@ -61,27 +74,39 @@ body{
 
     <div class="header">
 
-        <h4>
-            CH {{ store.code }}
-            <p>
-            Khung giờ hiện tại:
-            <b>{{ slot.name }}</b>
-            </p>
+        <h4 class="fw-bold mb-3">
+        🏪 Cửa hàng {{ store.code }}
         </h4>
 
-        <p>
-            Xin chào 👋
-        </p>
+        <div class="mb-3">
+
+        ⏰ Khung giờ hiện tại
+
+        <br>
+
+        <b class="fs-5">
+
+        {{ slot.name }}
+
+        </b>
+
+        </div>
+
+        <div>
+
+        Xin chào 👋
+
+        </div>
 
         <a
         href="{% url 'history' %}"
-        class="btn btn-secondary w-100">
+        class="btn btn-dark w-100">
 
         📋 Lịch sử đánh giá
 
         </a>
         <br><br>
-        <a href="/staff/" class="btn btn-warning w-100 mt-2">
+        <a href="/staff/" class="btn btn-outline-light w-100 mt-2">
             👷 Nhân viên xử lý lỗi
         </a>
     </div>
@@ -122,7 +147,7 @@ body{
 
                         <a
                         href="/upload/{{ item.id }}/"
-                        class="btn btn-primary btn-sm">
+                        class="btn btn-danger btn-sm">
 
                         Chụp
 
@@ -141,7 +166,7 @@ body{
     </div>
 
     <a href="/logout/"
-    class="btn btn-danger mt-3">
+    class="btn btn-outline-danger w-100 mt-3">
     Đăng xuất
     </a>
     
@@ -177,7 +202,7 @@ active-slot
 
             {{ slot_item.name }}
 
-            <span class="text-primary">
+            <span class="text-danger fw-bold">
 
                 (
                 {{ slot_item.start_time|time:"H:i" }}
