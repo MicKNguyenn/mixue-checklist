@@ -3,7 +3,7 @@ from . import views
 from checklist.views import *
 
 urlpatterns = [
-
+    
     path(
         'dashboard/',
         views.dashboard,

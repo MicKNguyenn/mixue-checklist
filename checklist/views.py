@@ -40,7 +40,7 @@ def dashboard(request):
     
     delete_old_reports()
     
-    all_slots = TimeSlot.objects.all()
+    all_slots = TimeSlot.objects.order_by("start_time")
     
     if "store_id" not in request.session:
         return redirect("/")
