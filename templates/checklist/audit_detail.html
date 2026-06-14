@@ -1,201 +1,372 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chi tiết Audit</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<title>Chi tiết Audit</title>
 
-    <style>
-        body {
-            background: #f5f6f8;
-        }
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+rel="stylesheet">
 
-        .phone {
-            max-width: 480px;
-            margin: auto;
-            padding: 12px;
-        }
+<style>
 
-        .audit-header {
-            border-radius: 16px;
-        }
+body{
+    background:#f4f6f9;
+}
 
-        .issue-card {
-            border-radius: 16px;
-            overflow: hidden;
-        }
+.phone{
+    max-width:480px;
+    margin:auto;
+    padding:12px;
+}
 
-        .issue-img {
-            width: 100%;
-            height: 220px;
-            object-fit: cover;
-        }
+.card{
+    border:none;
+    border-radius:18px;
+}
 
-        .score-badge {
-            font-size: 20px;
-            padding: 10px 16px;
-            border-radius: 12px;
-        }
-    </style>
+.issue-image{
+    width:100%;
+    border-radius:12px;
+}
+
+.fix-image{
+    width:100%;
+    border-radius:12px;
+}
+
+.status-box{
+    border-radius:12px;
+    padding:12px;
+    font-weight:bold;
+    text-align:center;
+}
+
+</style>
+
 </head>
 
 <body>
 
 <div class="phone">
 
-    <!-- HEADER -->
-    <div class="card shadow-sm audit-header mb-3">
-        <div class="card-body">
+<!-- HEADER -->
 
-            <h5 class="mb-3 fw-bold text-primary">
-                📋 Kết quả Audit
-            </h5>
+<div class="card shadow-sm mb-3">
 
-            <div class="mb-2">
-                <span class="text-muted">Cửa hàng</span><br>
-                <strong>{{ audit.store.code }}</strong>
-            </div>
+<div class="card-body">
 
-            <div class="mb-2">
-                <span class="text-muted">Điểm QC</span><br>
+<h4 class="text-primary fw-bold">
+📋 Kết quả Audit
+</h4>
 
-                <span class="badge bg-primary score-badge">
-                    {{ audit.score }}
-                </span>
-            </div>
+<hr>
 
-            <div>
-                <span class="text-muted">Ngày tạo</span><br>
-                <small>{{ audit.created_at }}</small>
-            </div>
+<div class="mb-3">
 
-        </div>
-    </div>
+<div class="text-secondary small">
+Cửa hàng
+</div>
 
-    <!-- LIST ISSUES -->
-    <div class="fw-bold mb-2">
-        ⚠️ Danh sách lỗi
-    </div>
-
-    {% for issue in audit.issues.all %}
-
-    <div class="card shadow-sm mb-3 issue-card">
-
-        {% if issue.image %}
-        <img src="{{ issue.image }}" class="img-fluid">
-        {% endif %}
-
-        <div class="card-body">
-
-            <div class="fw-bold mb-1">
-                Lỗi #{{ forloop.counter }}
-            </div>
-
-            <div class="text-muted mb-2">
-                {{ issue.note }}
-            </div>
-
-            <!-- STATUS -->
-
-            {% if issue.status == "pass" %}
-                <span class="badge bg-success">✔ Đạt</span>
-
-            {% elif issue.status == "fail" %}
-                <span class="badge bg-danger">❌ Không đạt</span>
-
-            {% elif issue.status == "fixed" %}
-                <span class="badge bg-warning text-dark">🔧 Đã khắc phục</span>
-
-            {% else %}
-                <span class="badge bg-secondary">⏳ Chờ xử lý</span>
-            {% endif %}
-            <!-- FIX IMAGE -->
-            <div class="mt-2">
-                {% if issue.fix_image %}
-                    <div class="text-success small fw-bold mb-1">
-                        Ảnh khắc phục:
-                    </div>
-                    <img src="{{ issue.fix_image }}" class="img-fluid">
-                {% else %}
-                    <div class="text-danger small">
-                        Chưa có ảnh khắc phục
-                    </div>
-                {% endif %}
-            </div>
-
-            <!-- QC REVIEW -->
-            <form class="review-form mt-3"
-                data-url="/audit/{{ audit.id }}/review/{{ issue.id }}/">
-
-                {% csrf_token %}
-
-                <textarea name="note"
-                        class="form-control mb-2"
-                        placeholder="Nhận xét QC..."></textarea>
-
-                <select name="status" class="form-select mb-2">
-
-                    <option value="pending">⏳ Chưa đánh giá</option>
-                    <option value="pass">✅ Đạt</option>
-                    <option value="fail">❌ Không đạt</option>
-
-                </select>
-
-                <button type="submit" class="btn btn-primary btn-sm w-100">
-                    Lưu đánh giá
-                </button>
-
-            </form>
-
-        </div>
-    </div>
-
-    {% empty %}
-
-    <div class="alert alert-success">
-        Không có lỗi nào 🎉
-    </div>
-
-    {% endfor %}
-
-    <!-- BUTTON -->
-    <a href="/audit-create/" class="btn btn-primary w-100 mt-3">
-        + Tạo Audit mới
-    </a>
-
-    <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary w-100 mt-2">
-        ⬅ Về Admin Dashboard
-    </a>
+<div class="fw-bold fs-5">
+{{ audit.store.code }}
+</div>
 
 </div>
+
+
+<div class="mb-3">
+
+<div class="text-secondary small">
+Điểm QC
+</div>
+
+<span class="badge bg-primary fs-5 p-3">
+{{ audit.score }}
+</span>
+
+</div>
+
+<div>
+
+<div class="text-secondary small">
+Ngày Audit
+</div>
+
+<div class="fw-bold">
+{{ audit.created_at }}
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
+
+<h5 class="mb-3">
+⚠️ Danh sách lỗi
+</h5>
+
+{% for issue in audit.issues.all %}
+
+<div class="card shadow-sm mb-4">
+
+<div class="card-body">
+
+<h5 class="fw-bold mb-3">
+Lỗi #{{ forloop.counter }}
+</h5>
+
+<!-- ẢNH LỖI -->
+
+{% if issue.image %}
+
+<div class="mb-3">
+
+<div class="fw-bold text-danger mb-2">
+📸 Ảnh lỗi
+</div>
+
+<img
+src="{{ issue.image }}"
+class="issue-image">
+
+</div>
+
+{% endif %}
+
+
+<!-- NOTE -->
+
+<div class="mb-3">
+
+<div class="fw-bold mb-2">
+📝 Nội dung lỗi
+</div>
+
+<div class="bg-light p-3 rounded">
+
+{{ issue.note }}
+
+</div>
+
+</div>
+
+
+
+<!-- TRẠNG THÁI -->
+
+{% if issue.status == "pass" %}
+
+<div class="status-box bg-success text-white mb-3">
+
+✅ ĐẠT
+
+</div>
+
+{% elif issue.status == "fail" %}
+
+<div class="status-box bg-danger text-white mb-3">
+
+❌ KHÔNG ĐẠT
+
+</div>
+
+{% elif issue.status == "fixed" %}
+
+<div class="status-box bg-warning mb-3">
+
+🔧 NHÂN VIÊN ĐÃ KHẮC PHỤC
+
+</div>
+
+{% else %}
+
+<div class="status-box bg-secondary text-white mb-3">
+
+⏳ CHƯA XỬ LÝ
+
+</div>
+
+{% endif %}
+
+
+
+<!-- ẢNH KHẮC PHỤC -->
+
+<div class="mb-3">
+
+<div class="fw-bold mb-2 text-success">
+
+📷 Ảnh khắc phục
+
+</div>
+
+{% if issue.fix_image %}
+
+<img
+src="{{ issue.fix_image }}"
+class="fix-image">
+
+{% else %}
+
+<div class="alert alert-light">
+
+Chưa có ảnh khắc phục
+
+</div>
+
+{% endif %}
+
+</div>
+
+
+
+<!-- QC REVIEW -->
+
+<form
+class="review-form"
+data-url="/audit/{{ audit.id }}/review/{{ issue.id }}/">
+
+{% csrf_token %}
+
+<div class="mb-2">
+
+<label class="fw-bold">
+Nhận xét QC
+</label>
+
+<textarea
+name="note"
+class="form-control"
+rows="3"
+placeholder="Nhập nhận xét..."></textarea>
+
+</div>
+
+
+<div class="mb-3">
+
+<label class="fw-bold">
+Đánh giá
+</label>
+
+<select
+name="status"
+class="form-select">
+
+<option value="pending">
+
+⏳ Chưa đánh giá
+
+</option>
+
+<option value="pass">
+
+✅ Đạt
+
+</option>
+
+<option value="fail">
+
+❌ Không đạt
+
+</option>
+
+</select>
+
+</div>
+
+
+<button
+class="btn btn-primary w-100">
+
+💾 Lưu đánh giá
+
+</button>
+
+</form>
+
+</div>
+
+</div>
+
+{% empty %}
+
+<div class="alert alert-success">
+
+🎉 Không có lỗi nào
+
+</div>
+
+{% endfor %}
+
+
+
+<a
+href="/audit-create/"
+class="btn btn-primary w-100 mb-2">
+
+➕ Tạo Audit mới
+
+</a>
+
+
+<a
+href="{% url 'admin_dashboard' %}"
+class="btn btn-secondary w-100">
+
+⬅ Quay lại Dashboard
+
+</a>
+
+</div>
+
+
+
 <script>
-document.querySelectorAll(".review-form").forEach(form => {
-    form.addEventListener("submit", async function(e) {
-        e.preventDefault(); // ❌ chặn reload
 
-        const url = this.dataset.url;
-        const formData = new FormData(this);
+document.querySelectorAll(".review-form").forEach(form=>{
 
-        const res = await fetch(url, {
-            method: "POST",
-            body: formData,
-            headers: {
-                "X-CSRFToken": this.querySelector("[name=csrfmiddlewaretoken]").value
-            }
-        });
+form.addEventListener("submit",async function(e){
 
-        const data = await res.json();
+e.preventDefault();
 
-        if (data.success) {
-            // cập nhật xong → reload nhẹ hoặc không reload
-            location.reload();
-        } else {
-            alert("Lỗi khi lưu!");
-        }
-    });
+const url=this.dataset.url;
+
+const formData=new FormData(this);
+
+const res=await fetch(url,{
+method:"POST",
+body:formData,
+headers:{
+"X-CSRFToken":
+this.querySelector("[name=csrfmiddlewaretoken]").value
+}
 });
+
+const data=await res.json();
+
+if(data.success){
+
+location.reload();
+
+}
+else{
+
+alert("Có lỗi xảy ra");
+
+}
+
+});
+
+});
+
 </script>
+
 </body>
 </html>
