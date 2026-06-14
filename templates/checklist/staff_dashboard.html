@@ -239,11 +239,14 @@ document.querySelectorAll(".fix-form").forEach(form => {
                 body: formData
             });
 
-            if (res.ok) {
-                alert("Gửi khắc phục thành công! Chờ QC xét duyệt.");
-                location.reload(); 
-            } else {
-                alert("Có lỗi xảy ra trong quá trình gửi.");
+            const data = await res.json();
+
+            if(data.success){
+                alert("Gửi khắc phục thành công!");
+                location.reload();
+            }
+            else{
+                alert(data.message);
             }
         } catch (error) {
             alert("Lỗi kết nối mạng, vui lòng thử lại!");

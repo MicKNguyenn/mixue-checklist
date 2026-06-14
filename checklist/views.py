@@ -946,7 +946,10 @@ def staff_dashboard(request):
 def staff_fix_issue(request, id):
 
     if "store_id" not in request.session:
-        return JsonResponse({"success": False})
+        return JsonResponse({
+            "success": False,
+            "message": "Chưa đăng nhập"
+        })
 
     store = Store.objects.get(
         id=request.session["store_id"]
@@ -957,6 +960,35 @@ def staff_fix_issue(request, id):
         id=id,
         audit__store=store
     )
+
+    try:
+
+        fix_file = request.FILES.get("fix_image")
+
+        if not fix_file:
+            return JsonResponse({
+                "success": False,
+                "message": "Không có file"
+            })
+
+        upload = cloudinary.uploader.upload(fix_file)
+
+        issue.fix_image = upload["secure_url"]
+        issue.status = "fixed"
+        issue.save()
+
+        return JsonResponse({
+            "success": True
+        })
+
+    except Exception as e:
+
+        print("LỖI:", e)
+
+        return JsonResponse({
+            "success": False,
+            "message": str(e)
+        })
     
 def review_issue(request, audit_id, issue_id):
 
