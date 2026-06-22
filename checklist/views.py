@@ -748,7 +748,121 @@ def export_excel(request):
             )
             
     ws.auto_filter.ref = ws.dimensions
-    
+
+    # ===============================
+    # THỐNG KÊ
+    # ===============================
+
+    stat_start_row = ws.max_row + 2
+
+    # màu
+    blue_fill = PatternFill(
+        "solid",
+        fgColor="5B9BD5"
+    )
+
+    orange_fill = PatternFill(
+        "solid",
+        fgColor="F4B183"
+    )
+
+    white_font = Font(
+        bold=True,
+        color="FFFFFF"
+    )
+
+    # dòng tỷ lệ đạt
+    ws.cell(
+        row=stat_start_row,
+        column=1
+    ).value = "THỐNG KÊ TỶ LỆ ĐẠT"
+
+    ws.cell(
+        row=stat_start_row,
+        column=1
+    ).fill = blue_fill
+
+    ws.cell(
+        row=stat_start_row,
+        column=1
+    ).font = white_font
+
+    # dòng lỗi
+    ws.cell(
+        row=stat_start_row + 1,
+        column=1
+    ).value = "THỐNG KÊ LỖI / CHƯA BÁO CÁO"
+
+    ws.cell(
+        row=stat_start_row + 1,
+        column=1
+    ).fill = orange_fill
+
+    ws.cell(
+        row=stat_start_row + 1,
+        column=1
+    ).font = Font(
+        bold=True
+    )
+
+    # tạo công thức cho từng cửa hàng
+    data_start = 2
+    data_end = stat_start_row - 3
+
+    for col in range(3, ws.max_column + 1):
+
+        letter = ws.cell(
+            row=1,
+            column=col
+        ).column_letter
+
+        # tỷ lệ đạt
+        rate_formula = (
+            f'=COUNTIF({letter}{data_start}:{letter}{data_end},"Đạt")'
+            f'/COUNTA({letter}{data_start}:{letter}{data_end})'
+        )
+
+        cell = ws.cell(
+            row=stat_start_row,
+            column=col
+        )
+
+        cell.value = rate_formula
+        cell.number_format = '0.00%'
+
+        cell.fill = blue_fill
+        cell.font = white_font
+        cell.alignment = center
+        cell.border = thin
+
+        # lỗi + chưa báo cáo
+        error_formula = (
+            f'=COUNTA({letter}{data_start}:{letter}{data_end})'
+            f'-COUNTIF({letter}{data_start}:{letter}{data_end},"Đạt")'
+        )
+
+        cell2 = ws.cell(
+            row=stat_start_row + 1,
+            column=col
+        )
+
+        cell2.value = error_formula
+        cell2.fill = orange_fill
+        cell2.font = Font(bold=True)
+        cell2.alignment = center
+        cell2.border = thin
+
+    # format cột A
+    ws.cell(
+        row=stat_start_row,
+        column=1
+    ).alignment = center
+
+    ws.cell(
+        row=stat_start_row + 1,
+        column=1
+    ).alignment = center
+
     wb.save(response)
 
     return response
