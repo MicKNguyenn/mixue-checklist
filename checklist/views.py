@@ -1160,7 +1160,7 @@ def kpi_dashboard(request):
 
     if total_reports > 0:
         pass_percent = round(
-            pass_count / total_reports,
+            pass_count * 100 / total_reports,
             1
         )
     else:
