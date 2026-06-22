@@ -113,5 +113,16 @@ urlpatterns = [
     name="staff_fix"
     ),
     
+    path(
+    "kpi-dashboard/",
+    views.kpi_dashboard,
+    name="kpi_dashboard"
+    ),
+    
+    path(
+    "export-kpi/",
+    views.export_kpi_excel,
+    name="export_kpi_excel"
+    ),
 ]
     

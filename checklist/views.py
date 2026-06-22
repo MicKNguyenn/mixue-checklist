@@ -34,6 +34,11 @@ from .models import Audit, AuditIssue
 from django.core.paginator import Paginator
 from django.contrib import messages
 from django.db.models import Q, Exists, OuterRef  
+from django.db.models import Count
+from datetime import datetime
+from openpyxl import Workbook
+from openpyxl.styles import *
+from django.db.models import Count
 
 
 def dashboard(request):
@@ -755,66 +760,48 @@ def export_excel(request):
 
     stat_start_row = ws.max_row + 2
 
-    # màu
-    blue_fill = PatternFill(
-        "solid",
-        fgColor="5B9BD5"
+    blue_fill = PatternFill("solid", fgColor="5B9BD5")
+    orange_fill = PatternFill("solid", fgColor="F4B183")
+    white_font = Font(bold=True, color="FFFFFF")
+    bold_font = Font(bold=True)
+
+    center = Alignment(horizontal="center", vertical="center")
+
+    # ===== ROW 1: TỶ LỆ ĐẠT =====
+    ws.merge_cells(
+        start_row=stat_start_row,
+        start_column=1,
+        end_row=stat_start_row,
+        end_column=2
     )
 
-    orange_fill = PatternFill(
-        "solid",
-        fgColor="F4B183"
+    cell = ws.cell(row=stat_start_row, column=1)
+    cell.value = "THỐNG KÊ TỶ LỆ ĐẠT"
+    cell.fill = blue_fill
+    cell.font = white_font
+    cell.alignment = center
+
+    # ===== ROW 2: LỖI =====
+    ws.merge_cells(
+        start_row=stat_start_row + 1,
+        start_column=1,
+        end_row=stat_start_row + 1,
+        end_column=2
     )
 
-    white_font = Font(
-        bold=True,
-        color="FFFFFF"
-    )
+    cell2 = ws.cell(row=stat_start_row + 1, column=1)
+    cell2.value = "THỐNG KÊ LỖI / CHƯA BÁO CÁO"
+    cell2.fill = orange_fill
+    cell2.font = bold_font
+    cell2.alignment = center
 
-    # dòng tỷ lệ đạt
-    ws.cell(
-        row=stat_start_row,
-        column=1
-    ).value = "THỐNG KÊ TỶ LỆ ĐẠT"
-
-    ws.cell(
-        row=stat_start_row,
-        column=1
-    ).fill = blue_fill
-
-    ws.cell(
-        row=stat_start_row,
-        column=1
-    ).font = white_font
-
-    # dòng lỗi
-    ws.cell(
-        row=stat_start_row + 1,
-        column=1
-    ).value = "THỐNG KÊ LỖI / CHƯA BÁO CÁO"
-
-    ws.cell(
-        row=stat_start_row + 1,
-        column=1
-    ).fill = orange_fill
-
-    ws.cell(
-        row=stat_start_row + 1,
-        column=1
-    ).font = Font(
-        bold=True
-    )
-
-    # tạo công thức cho từng cửa hàng
+    # ===== FORMULA =====
     data_start = 2
-    data_end = stat_start_row - 3
+    data_end = stat_start_row - 1
 
     for col in range(3, ws.max_column + 1):
 
-        letter = ws.cell(
-            row=1,
-            column=col
-        ).column_letter
+        letter = ws.cell(row=1, column=col).column_letter
 
         # tỷ lệ đạt
         rate_formula = (
@@ -822,46 +809,24 @@ def export_excel(request):
             f'/COUNTA({letter}{data_start}:{letter}{data_end})'
         )
 
-        cell = ws.cell(
-            row=stat_start_row,
-            column=col
-        )
+        c = ws.cell(row=stat_start_row, column=col)
+        c.value = rate_formula
+        c.number_format = "0.00%"
+        c.fill = blue_fill
+        c.font = white_font
+        c.alignment = center
 
-        cell.value = rate_formula
-        cell.number_format = '0.00%'
-
-        cell.fill = blue_fill
-        cell.font = white_font
-        cell.alignment = center
-        cell.border = thin
-
-        # lỗi + chưa báo cáo
+    # lỗi
         error_formula = (
             f'=COUNTA({letter}{data_start}:{letter}{data_end})'
             f'-COUNTIF({letter}{data_start}:{letter}{data_end},"Đạt")'
         )
 
-        cell2 = ws.cell(
-            row=stat_start_row + 1,
-            column=col
-        )
-
-        cell2.value = error_formula
-        cell2.fill = orange_fill
-        cell2.font = Font(bold=True)
-        cell2.alignment = center
-        cell2.border = thin
-
-    # format cột A
-    ws.cell(
-        row=stat_start_row,
-        column=1
-    ).alignment = center
-
-    ws.cell(
-        row=stat_start_row + 1,
-        column=1
-    ).alignment = center
+        c2 = ws.cell(row=stat_start_row + 1, column=col)
+        c2.value = error_formula
+        c2.fill = orange_fill
+        c2.font = bold_font
+        c2.alignment = center
 
     wb.save(response)
 
@@ -1149,3 +1114,575 @@ def audit_review_issue(request, audit_id, issue_id):
     issue.save()
 
     return JsonResponse({"success": True})
+
+def kpi_dashboard(request):
+
+    if not request.user.is_staff:
+        return redirect("/")
+
+    stores = Store.objects.all().order_by("code")
+
+    selected_stores = request.GET.getlist("stores")
+
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
+
+    reports = Report.objects.all()
+
+    if start_date:
+        reports = reports.filter(
+            report_date__gte=start_date
+        )
+
+    if end_date:
+        reports = reports.filter(
+            report_date__lte=end_date
+        )
+
+    if selected_stores:
+        reports = reports.filter(
+            store_id__in=selected_stores
+        )
+
+    total_reports = reports.count()
+
+    pass_count = reports.filter(
+        status="pass"
+    ).count()
+
+    fail_count = reports.filter(
+        status="fail"
+    ).count()
+
+    pending_count = reports.filter(
+        status="pending"
+    ).count()
+
+    if total_reports > 0:
+        pass_percent = round(
+            pass_count * 100 / total_reports,
+            1
+        )
+    else:
+        pass_percent = 0
+
+    top_stores = (
+        reports
+        .values(
+            "store__code"
+        )
+        .annotate(
+            total=Count("id")
+        )
+        .order_by(
+            "-total"
+        )[:10]
+    )
+
+    top_fail_items = (
+        reports.filter(
+            status="fail"
+        )
+        .values(
+            "item__title"
+        )
+        .annotate(
+            total=Count("id")
+        )
+        .order_by(
+            "-total"
+        )[:10]
+    )
+
+    return render(
+        request,
+        "checklist/kpi_dashboard.html",
+        {
+            "stores": stores,
+
+            "selected_stores": list(
+                map(int, selected_stores)
+            ) if selected_stores else [],
+
+            "start_date": start_date,
+            "end_date": end_date,
+
+            "total_reports": total_reports,
+
+            "pass_count": pass_count,
+
+            "fail_count": fail_count,
+
+            "pending_count": pending_count,
+
+            "pass_percent": pass_percent,
+
+            "top_stores": top_stores,
+
+            "top_fail_items": top_fail_items
+        }
+    )
+
+from openpyxl.styles import PatternFill, Font, Border, Side, Alignment
+
+HEADER_FILL = PatternFill("solid", fgColor="E60012")
+
+HEADER_FONT = Font(color="FFFFFF", bold=True, size=12)
+
+CENTER = Alignment(horizontal="center", vertical="center")
+
+THIN = Border(
+    left=Side(style="thin"),
+    right=Side(style="thin"),
+    top=Side(style="thin"),
+    bottom=Side(style="thin")
+)
+
+GREEN_FILL = PatternFill("solid", fgColor="C6EFCE")
+RED_FILL = PatternFill("solid", fgColor="FFC7CE")
+YELLOW_FILL = PatternFill("solid", fgColor="FFEB9C")
+
+def export_kpi_excel(request):
+
+    if not request.user.is_staff:
+        return redirect("/")
+
+    start_date=request.GET.get("start_date")
+    end_date=request.GET.get("end_date")
+
+    reports=Report.objects.all()
+
+    if start_date:
+        reports=reports.filter(
+            report_date__gte=start_date
+        )
+
+    if end_date:
+        reports=reports.filter(
+            report_date__lte=end_date
+        )
+
+    wb=Workbook()
+
+    ws=wb.active
+    ws.title="Tong Quan"
+
+    ws.append(["Chỉ số","Giá trị"])
+
+    total=reports.count()
+
+    passed=reports.filter(
+        status="pass"
+    ).count()
+
+    fail=reports.filter(
+        status="fail"
+    ).count()
+
+    pending=reports.filter(
+        status="pending"
+    ).count()
+
+    percent=0
+
+    if total>0:
+        percent=round(
+            passed*100/total,
+            1
+        )
+
+    ws.append(["Tổng checklist",total])
+    ws.append(["Đạt",passed])
+    ws.append(["Không đạt",fail])
+    ws.append(["Pending",pending])
+    ws.append(["Tỷ lệ đạt (%)",percent])
+    
+    for row in ws.iter_rows(min_row=2):
+
+        label = row[0].value
+
+        if label == "Đạt":
+            row[1].fill = GREEN_FILL
+
+        elif label == "Không đạt":
+            row[1].fill = RED_FILL
+
+        elif label == "Pending":
+            row[1].fill = YELLOW_FILL
+
+    format_sheet(ws)
+    
+    
+    
+    #SHEET 2
+    ws2=wb.create_sheet(
+        "Theo CH"
+    )
+
+    ws2.append(
+        [
+            "Cửa hàng",
+            "Tổng",
+            "Đạt",
+            "% đạt"
+        ]
+    )
+
+    stores=Store.objects.all()
+
+    for store in stores:
+
+        rs=reports.filter(
+            store=store
+        )
+
+        total_store=rs.count()
+
+        pass_store=rs.filter(
+            status="pass"
+        ).count()
+
+        percent_store=0
+
+        if total_store>0:
+            percent_store=round(
+                pass_store*100/total_store,
+                1
+            )
+
+        ws2.append(
+            [
+                store.code,
+                total_store,
+                pass_store,
+                percent_store
+            ]
+        )
+    for row in ws2.iter_rows(min_row=2):
+
+        percent_cell = row[3]
+
+        if percent_cell.value >= 90:
+
+            percent_cell.fill = GREEN_FILL
+
+        elif percent_cell.value < 70:
+
+            percent_cell.fill = RED_FILL
+
+    format_sheet(ws2)
+    
+    #SHEET 3
+    ws3=wb.create_sheet(
+        "Top Loi"
+    )
+
+    ws3.append(
+        [
+            "Checklist lỗi",
+            "Số lần"
+        ]
+    )
+
+    top_fail=(
+        reports
+        .filter(
+            status="fail"
+        )
+        .values(
+            "item__title"
+        )
+        .annotate(
+            total=Count("id")
+        )
+        .order_by(
+            "-total"
+        )
+    )
+
+    for row in top_fail:
+
+        ws3.append(
+            [
+                row["item__title"],
+                row["total"]
+            ]
+        )
+    
+    format_sheet(ws3)
+    
+    #SHEET 4
+    ws4=wb.create_sheet(
+        "Theo Ngay"
+    )
+
+    ws4.append(
+        [
+            "Ngày",
+            "Tổng",
+            "Đạt",
+            "% đạt"
+        ]
+    )
+
+    days=(
+        reports
+        .values(
+            "report_date"
+        )
+        .annotate(
+            total=Count("id")
+        )
+        .order_by(
+            "report_date"
+        )
+    )
+
+    for d in days:
+
+        total_day=d["total"]
+
+        pass_day=reports.filter(
+            report_date=d["report_date"],
+            status="pass"
+        ).count()
+
+        percent_day=0
+
+        if total_day>0:
+
+            percent_day=round(
+                pass_day*100/total_day,
+                1
+            )
+
+        ws4.append(
+            [
+                d["report_date"],
+                total_day,
+                pass_day,
+                percent_day
+            ]
+        )
+    for row in ws4.iter_rows(min_row=2):
+
+        percent_cell = row[3]
+
+        if percent_cell.value >= 90:
+
+            percent_cell.fill = GREEN_FILL
+
+        elif percent_cell.value < 70:
+
+            percent_cell.fill = RED_FILL
+
+    format_sheet(ws4)
+    
+    response=HttpResponse(
+        content_type=
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+    response[
+        "Content-Disposition"
+    ]=(
+        'attachment; filename="KPI_Report.xlsx"'
+    )
+    
+    ws5 = wb.create_sheet("Leaderboard")
+
+    red_fill=PatternFill(
+        "solid",
+        fgColor="E60012"
+    )
+
+    white_font=Font(
+        bold=True,
+        color="FFFFFF"
+    )
+
+    thin=Border(
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin")
+    )
+    
+    ws5.append([
+        "Hạng",
+        "Cửa hàng",
+        "% đạt",
+        "Tổng checklist"
+    ])
+
+    ranking=[]
+
+    for store in Store.objects.all():
+
+        rs=reports.filter(
+            store=store
+        )
+
+        total_store=rs.count()
+
+        pass_store=rs.filter(
+            status="pass"
+        ).count()
+
+        percent_store=0
+
+        if total_store>0:
+
+            percent_store=round(
+                pass_store*100/total_store,
+                1
+            )
+
+        ranking.append({
+            "code":store.code,
+            "percent":percent_store,
+            "total":total_store
+        })
+    
+    ranking.sort(
+        key=lambda x:x["percent"],
+        reverse=True
+    )
+    
+    rank = 1
+
+    for row in ranking:
+
+        ws5.append([
+            rank,
+            row["code"],
+            row["percent"],
+            row["total"]
+        ])
+
+        current_row = ws5.max_row
+
+        if rank == 1:
+
+            fill = PatternFill(
+                "solid",
+                fgColor="FFD700"
+            )
+
+        elif rank == 2:
+
+            fill = PatternFill(
+                "solid",
+                fgColor="C0C0C0"
+            )
+
+        elif rank == 3:
+
+            fill = PatternFill(
+                "solid",
+                fgColor="CD7F32"
+            )
+
+        else:
+
+            fill = None
+
+        if fill:
+
+            for cell in ws5[current_row]:
+
+                cell.fill = fill
+
+        rank += 1
+
+    format_sheet(ws5)  
+    
+    auto_fit_columns(ws)
+    auto_fit_columns(ws2)
+    auto_fit_columns(ws3)
+    auto_fit_columns(ws4)
+    auto_fit_columns(ws5)
+    
+    wb.save(response)
+    return response
+
+def format_sheet(sheet):
+
+    sheet.freeze_panes = "A2"
+
+    for row in sheet.iter_rows():
+
+        for cell in row:
+
+            if isinstance(cell.value, (int, float)):
+                cell.alignment = Alignment(
+                    horizontal="right",
+                    vertical="center"
+                )
+            else:
+                cell.alignment = Alignment(
+                    horizontal="center",
+                    vertical="center"
+                )
+
+            cell.border = THIN
+
+    for cell in sheet[1]:
+
+        cell.fill = HEADER_FILL
+        cell.font = HEADER_FONT
+
+    sheet.auto_filter.ref = sheet.dimensions
+
+    for col in sheet.columns:
+
+        max_len = max(
+            len(str(c.value))
+            if c.value is not None
+            else 0
+            for c in col
+        )
+
+        sheet.column_dimensions[
+            col[0].column_letter
+        ].width = max_len + 5
+        
+    for row in sheet.iter_rows(min_row=2):
+
+        for cell in row:
+
+        # nếu cột tên là "% đạt"
+            if "đạt" in str(sheet.cell(row=1, column=cell.column).value or "").lower():
+
+                if isinstance(cell.value, (int, float)):
+                    cell.number_format = "0.0%"
+                    
+                    
+def auto_fit_columns(sheet):
+
+    for col in sheet.columns:
+
+        max_length = 0
+        column = col[0].column_letter
+
+        for cell in col:
+
+            if cell.value is None:
+                continue
+
+            value = str(cell.value)
+
+            # xử lý % và số dài
+            length = len(value)
+
+            if length > max_length:
+                max_length = length
+
+        adjusted_width = max_length + 4
+
+        # giới hạn cho đẹp UI
+        if adjusted_width > 40:
+            adjusted_width = 40
+
+        sheet.column_dimensions[column].width = adjusted_width
+        
