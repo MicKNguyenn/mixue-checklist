@@ -1160,7 +1160,7 @@ def kpi_dashboard(request):
 
     if total_reports > 0:
         pass_percent = round(
-            pass_count * 100 / total_reports,
+            pass_count / total_reports,
             1
         )
     else:
@@ -1287,7 +1287,7 @@ def export_kpi_excel(request):
 
     if total>0:
         percent=round(
-            passed*100/total,
+            passed/total,
             1
         )
 
@@ -1346,7 +1346,7 @@ def export_kpi_excel(request):
 
         if total_store>0:
             percent_store=round(
-                pass_store*100/total_store,
+                pass_store/total_store,
                 1
             )
 
@@ -1452,7 +1452,7 @@ def export_kpi_excel(request):
         if total_day>0:
 
             percent_day=round(
-                pass_day*100/total_day,
+                pass_day/total_day,
                 1
             )
 
@@ -1534,7 +1534,7 @@ def export_kpi_excel(request):
         if total_store>0:
 
             percent_store=round(
-                pass_store*100/total_store,
+                pass_store/total_store,
                 1
             )
 
