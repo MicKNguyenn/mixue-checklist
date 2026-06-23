@@ -1264,217 +1264,240 @@ def export_kpi_excel(request):
 
     wb=Workbook()
 
-    ws=wb.active
-    ws.title="Tong Quan"
+    ws = wb.active
+    ws.title = "Tong Quan"
 
-    ws.append(["Chỉ số","Giá trị"])
+    ws.append(["Chỉ số", "Giá trị"])
 
-    total=reports.count()
+    ws.append(["Từ ngày", start_date])
+    ws.append(["Đến ngày", end_date])
 
-    passed=reports.filter(
-        status="pass"
-    ).count()
+    total = reports.count()
 
-    fail=reports.filter(
-        status="fail"
-    ).count()
+    passed = reports.filter(status="pass").count()
+    failed = reports.filter(status="fail").count()
+    pending = reports.filter(status="pending").count()
 
-    pending=reports.filter(
-        status="pending"
-    ).count()
+    percent = 0
 
-    percent=0
+    if total > 0:
+        percent = round(passed * 100 / total, 1)
 
-    if total>0:
-        percent=round(
-            passed/total,
-            1
-        )
-
-    ws.append(["Tổng checklist",total])
-    ws.append(["Đạt",passed])
-    ws.append(["Không đạt",fail])
-    ws.append(["Pending",pending])
-    ws.append(["Tỷ lệ đạt (%)",percent])
-    
-    for row in ws.iter_rows(min_row=2):
-
-        label = row[0].value
-
-        if label == "Đạt":
-            row[1].fill = GREEN_FILL
-
-        elif label == "Không đạt":
-            row[1].fill = RED_FILL
-
-        elif label == "Pending":
-            row[1].fill = YELLOW_FILL
+    ws.append(["Tổng checklist", total])
+    ws.append(["Đạt", passed])
+    ws.append(["Không đạt", failed])
+    ws.append(["Pending", pending])
+    ws.append(["Tỷ lệ đạt (%)", percent])
 
     format_sheet(ws)
+
     
-    
-    
-    #SHEET 2
-    ws2=wb.create_sheet(
-        "Theo CH"
-    )
+    # SHEET 2
+    ws2 = wb.create_sheet("Theo CH")
 
-    ws2.append(
-        [
-            "Cửa hàng",
-            "Tổng",
-            "Đạt",
-            "% đạt"
-        ]
-    )
+    ws2.append([
+        "Cửa hàng",
+        "Tổng lỗi",
+        "Checklist đạt TB/ngày",
+        "% đạt"
+    ])
 
-    stores=Store.objects.all()
+    # số ngày trong khoảng admin chọn
+    days_count = reports.values(
+        "report_date"
+    ).distinct().count()
 
-    for store in stores:
+    for store in Store.objects.all():
 
-        rs=reports.filter(
+        rs = reports.filter(
             store=store
         )
 
-        total_store=rs.count()
+        total_store = rs.count()
 
-        pass_store=rs.filter(
+        # số checklist đạt
+        pass_store = rs.filter(
             status="pass"
         ).count()
 
-        percent_store=0
+        # số lỗi
+        fail_store = rs.filter(
+            status="fail"
+        ).count()
 
-        if total_store>0:
-            percent_store=round(
-                pass_store/total_store,
+        # checklist đạt trung bình mỗi ngày
+        avg_pass = 0
+
+        if days_count > 0:
+
+            avg_pass = round(
+                pass_store / days_count,
                 1
             )
 
-        ws2.append(
-            [
-                store.code,
-                total_store,
-                pass_store,
-                percent_store
-            ]
-        )
+        # % đạt của cửa hàng
+        percent_store = 0
+
+        if total_store > 0:
+
+            percent_store = round(
+                pass_store * 100 / total_store,
+                1
+            )
+
+        ws2.append([
+            store.code,
+            fail_store,
+            avg_pass,
+            percent_store
+        ])
+
+    # tô màu cột % đạt
     for row in ws2.iter_rows(min_row=2):
 
         percent_cell = row[3]
 
-        if percent_cell.value >= 90:
+        if percent_cell.value >= 95:
 
             percent_cell.fill = GREEN_FILL
 
-        elif percent_cell.value < 70:
+        elif percent_cell.value >= 80:
+
+            percent_cell.fill = YELLOW_FILL
+
+        else:
 
             percent_cell.fill = RED_FILL
 
     format_sheet(ws2)
     
     #SHEET 3
-    ws3=wb.create_sheet(
-        "Top Loi"
-    )
+    ws3 = wb.create_sheet("Top Loi")
 
-    ws3.append(
-        [
-            "Checklist lỗi",
-            "Số lần"
-        ]
-    )
+    ws3.append([
+        "CH",
+        "Checklist lỗi",
+        "Số lần"
+    ])
 
-    top_fail=(
+    top_fail = (
         reports
-        .filter(
-            status="fail"
-        )
+        .filter(status="fail")
         .values(
+            "store__code",
             "item__title"
         )
         .annotate(
             total=Count("id")
-        )
-        .order_by(
-            "-total"
-        )
+        )   
+        .order_by("-total")
     )
 
     for row in top_fail:
 
-        ws3.append(
-            [
-                row["item__title"],
-                row["total"]
-            ]
-        )
-    
+        ws3.append([
+            row["store__code"],
+            row["item__title"],
+            row["total"]
+        ])
+
     format_sheet(ws3)
     
     #SHEET 4
-    ws4=wb.create_sheet(
-        "Theo Ngay"
-    )
+    ws4 = wb.create_sheet("Theo Ngay")
 
-    ws4.append(
-        [
-            "Ngày",
-            "Tổng",
-            "Đạt",
-            "% đạt"
-        ]
-    )
+    ws4.append([
+        "Ngày",
+        "% đạt",
+        "CH tốt nhất",
+        "Checklist lỗi nhiều nhất"
+    ])
 
-    days=(
+    days = (
         reports
-        .values(
-            "report_date"
-        )
-        .annotate(
-            total=Count("id")
-        )
-        .order_by(
-            "report_date"
-        )
+        .values("report_date")
+        .distinct()
+        .order_by("report_date")
     )
 
     for d in days:
 
-        total_day=d["total"]
+        date_value = d["report_date"]
 
-        pass_day=reports.filter(
-            report_date=d["report_date"],
+        day_reports = reports.filter(
+            report_date=date_value
+        )
+
+        total_day = day_reports.count()
+
+        pass_day = day_reports.filter(
             status="pass"
         ).count()
 
-        percent_day=0
+        percent_day = 0
 
-        if total_day>0:
+        if total_day > 0:
 
-            percent_day=round(
-                pass_day/total_day,
+            percent_day = round(
+                pass_day * 100 / total_day,
                 1
             )
 
-        ws4.append(
-            [
-                d["report_date"],
-                total_day,
-                pass_day,
-                percent_day
-            ]
+        # CH tốt nhất
+
+        best_store = ""
+
+        ranking = []
+
+        for store in Store.objects.all():
+
+            rs = day_reports.filter(
+                store=store
+            )
+
+            total_store = rs.count()
+
+            pass_store = rs.filter(
+                status="pass"
+            ).count()
+
+            p = 0
+
+            if total_store > 0:
+
+                p = pass_store * 100 / total_store
+
+            ranking.append(
+                (p, store.code)
+            )
+
+        if ranking:
+
+            best_store = max(ranking)[1]
+
+        # lỗi nhiều nhất
+
+        top_error = (
+            day_reports
+            .filter(status="fail")
+            .values("item__title")
+            .annotate(total=Count("id"))
+            .order_by("-total")
+            .first()
         )
-    for row in ws4.iter_rows(min_row=2):
 
-        percent_cell = row[3]
+        error_name = ""
 
-        if percent_cell.value >= 90:
+        if top_error:
 
-            percent_cell.fill = GREEN_FILL
+            error_name = top_error["item__title"]
 
-        elif percent_cell.value < 70:
-
-            percent_cell.fill = RED_FILL
+        ws4.append([
+            date_value,
+            percent_day,
+            best_store,
+            error_name
+        ])
 
     format_sheet(ws4)
     
@@ -1534,7 +1557,7 @@ def export_kpi_excel(request):
         if total_store>0:
 
             percent_store=round(
-                pass_store/total_store,
+                pass_store * 100 / total_store,
                 1
             )
 
@@ -1651,8 +1674,23 @@ def format_sheet(sheet):
 
         for cell in row:
 
-        # nếu cột tên là "% đạt"
-            if "đạt" in str(sheet.cell(row=1, column=cell.column).value or "").lower():
+        # nếu cột tên là "trung bình đạt"
+            for row in sheet.iter_rows(min_row=2):
+
+                for cell in row:
+
+                    header = str(
+                        sheet.cell(
+                            row=1,
+                            column=cell.column
+                        ).value or ""
+                    ).lower()
+
+                    if header == "% đạt":
+
+                        if isinstance(cell.value, (int, float)):
+
+                            cell.number_format = '0.0'
 
                 if isinstance(cell.value, (int, float)):
                     cell.number_format = "0.0%"
