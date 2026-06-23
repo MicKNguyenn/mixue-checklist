@@ -889,10 +889,7 @@ def audit_create(request):
 
     # lấy danh sách store cho form
     stores = Store.objects.all()
-    
-    # check login/session
-    if "store_id" not in request.session:
-        return redirect("/")
+
 
     if request.method == "POST":
 
