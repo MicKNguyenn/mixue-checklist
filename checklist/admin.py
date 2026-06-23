@@ -2,6 +2,7 @@ from django.contrib import admin
 from .models import *
 from django.utils.html import format_html
 from .models import Audit
+from .models import AuditCategory, AuditItem
 
 @admin.register(Report)
 class ReportAdmin(admin.ModelAdmin):
@@ -28,3 +29,6 @@ admin.site.register(Audit)
 
 admin.site.register(TimeSlot)
 admin.site.register(ChecklistItem)
+
+admin.site.register(AuditCategory)
+admin.site.register(AuditItem)

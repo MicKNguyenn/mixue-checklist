@@ -124,5 +124,18 @@ urlpatterns = [
     views.export_kpi_excel,
     name="export_kpi_excel"
     ),
+    
+    path(
+        "store/<int:store_id>/audits/", 
+        views.store_audit_history, 
+        name="store_audit_history"
+    ),
+    
+    path(
+        "staff/audit/<int:audit_id>/",
+        views.staff_dashboard_by_audit,
+        name="staff_dashboard_by_audit"
+    ),
+    
 ]
     

@@ -887,52 +887,60 @@ def login_view(request):
     
 def audit_create(request):
 
-    if not request.user.is_staff:
-        return redirect("/")
-
+    # lấy danh sách store cho form
     stores = Store.objects.all()
+    
+    # check login/session
+    if "store_id" not in request.session:
+        return redirect("/")
 
     if request.method == "POST":
 
         store_id = request.POST.get("store_id")
-        score = request.POST.get("score")
-
-        store = Store.objects.get(id=store_id)
 
         audit = Audit.objects.create(
-            store=store,
-            score=int(score),
-            user=request.user
+            store_id=store_id,
+            user=request.user,
+            score=200
         )
 
-        i = 1
+        for category in AuditCategory.objects.filter(is_active=True):
 
-        while True:
+            for item in category.items.filter(is_active=True):
 
-            image_file = request.FILES.get(f"image_{i}")
-            note = request.POST.get(f"note_{i}")
+                status = request.POST.get(f"status_{item.id}", "pass")
 
-            if not image_file and not note:
-                break
+                note = request.POST.get(f"note_{item.id}", "")
+                
+                issue = AuditIssue.objects.create(
+                    audit=audit,
+                    item=item,
+                    category=item.category,
+                    status=status,
+                    note=note,  
+                    deduct_score=item.score if status == "fail" else 0
+                )
 
-            # Không cho tạo lỗi nếu chưa có ảnh
-            if not image_file:
-                i += 1
-                continue
+                if status == "fail":
 
-            upload = cloudinary.uploader.upload(image_file)
+                    file = request.FILES.get(f"image_{item.id}")
 
-            AuditIssue.objects.create(
-                audit=audit,
-                image=upload["secure_url"],
-                note=note
-            )
+                    if file:
+                        upload = cloudinary.uploader.upload(file)
 
-            i += 1
+                        AuditIssueImage.objects.create(
+                            issue=issue,
+                            image=upload["secure_url"]
+                        )
+
+        update_audit_score(audit)
 
         return redirect(f"/audit/{audit.id}/")
 
+    categories = AuditCategory.objects.prefetch_related("items").all()
+
     return render(request, "checklist/audit_create.html", {
+        "categories": categories,
         "stores": stores
     })
     
@@ -955,7 +963,6 @@ def audit_detail(request, id):
         }
     )
     
-
 def audit_list(request):
 
     if not request.user.is_staff:
@@ -1004,7 +1011,6 @@ def audit_list(request):
         "search": search
     })
     
-    
 def delete_audit(request, id):
 
     audit = get_object_or_404(Audit, id=id)
@@ -1021,23 +1027,18 @@ def staff_dashboard(request):
     if "store_id" not in request.session:
         return redirect("/")
 
-    store = Store.objects.get(
-        id=request.session["store_id"]
-    )
+    store = Store.objects.get(id=request.session["store_id"])
 
-    audit = Audit.objects.filter(
-        store=store
-    ).order_by(
-        "-created_at"
-    ).first()
+    audit_id = request.GET.get("audit_id")
 
-    return render(
-        request,
-        "checklist/staff_dashboard.html",
-        {
-            "audit": audit
-        }
-    )
+    if audit_id:
+        audit = get_object_or_404(Audit, id=audit_id, store=store)
+    else:
+        audit = Audit.objects.filter(store=store).order_by("-created_at").first()
+
+    return render(request, "checklist/staff_dashboard.html", {
+        "audit": audit
+    })
     
 def staff_fix_issue(request, id):
 
@@ -1070,7 +1071,8 @@ def staff_fix_issue(request, id):
         upload = cloudinary.uploader.upload(fix_file)
 
         issue.fix_image = upload["secure_url"]
-        issue.status = "fixed"
+        issue.note = request.POST.get("note", "") 
+        issue.status = "pending"  # hoặc "fixed" nếu bạn muốn giữ flow cũ
         issue.save()
 
         return JsonResponse({
@@ -1085,16 +1087,64 @@ def staff_fix_issue(request, id):
             "success": False,
             "message": str(e)
         })
+        
+def update_audit_score(audit):
+
+    score = 200
+
+    for issue in audit.issues.all():
+
+        if issue.status == "fail":
+            score -= issue.deduct_score
+
+    audit.score = max(score, 0)
+    audit.save()
+    
+def store_audit_history(request, store_id):
+
+    audits = Audit.objects.filter(store_id=store_id).order_by("-created_at")
+
+    return render(request, "checklist/store_history.html", {
+        "audits": audits
+    })
+    
+def staff_dashboard_by_audit(request, audit_id):
+
+    if "store_id" not in request.session:
+        return redirect("/")
+
+    store = Store.objects.get(id=request.session["store_id"])
+
+    audit = get_object_or_404(
+        Audit,
+        id=audit_id,
+        store=store
+    )
+
+    return render(
+        request,
+        "checklist/staff_dashboard.html",
+        {
+            "audit": audit
+        }
+    )
     
 def review_issue(request, audit_id, issue_id):
 
-    issue = get_object_or_404(AuditIssue, id=issue_id, audit_id=audit_id)
+    issue = get_object_or_404(
+        AuditIssue,
+        id=issue_id,
+        audit_id=audit_id
+    )
 
     if request.method == "POST":
-        status = request.POST.get("status")  # pass / fail
+
+        status = request.POST.get("status")
 
         issue.status = status
         issue.save()
+
+        update_audit_score(issue.audit)
 
     return redirect(f"/audit/{audit_id}/")
 
@@ -1408,7 +1458,7 @@ def export_kpi_excel(request):
 
     ws4.append([
         "Ngày",
-        "% đạt",
+        "% đạt hàng ngày",
         "CH tốt nhất",
         "Checklist lỗi nhiều nhất"
     ])
@@ -1730,4 +1780,6 @@ def auto_fit_columns(sheet):
             adjusted_width = 40
 
         sheet.column_dimensions[column].width = adjusted_width
+        
+
         

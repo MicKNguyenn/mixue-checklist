@@ -12,8 +12,7 @@ class TimeSlot(models.Model):
 
     def __str__(self):
         return self.name
-
-
+    
 class ChecklistItem(models.Model):
 
     slot = models.ForeignKey(
@@ -24,7 +23,6 @@ class ChecklistItem(models.Model):
     title = models.CharField(
         max_length=255
     )
-
 
 class Report(models.Model):
 
@@ -76,10 +74,38 @@ class Report(models.Model):
 
 class Audit(models.Model):
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
-    score = models.IntegerField()
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    score = models.IntegerField(default=200)
     created_at = models.DateTimeField(auto_now_add=True)
     
+class AuditCategory(models.Model):
+    
+    title=models.CharField(
+        max_length=255
+    )
+
+    weight=models.IntegerField()
+
+    is_active=models.BooleanField(
+        default=True
+    )
+
+class AuditItem(models.Model):
+
+    category = models.ForeignKey(
+        AuditCategory,
+        on_delete=models.CASCADE,
+        related_name="items"
+    )
+
+    title = models.CharField(max_length=255)
+
+    score = models.IntegerField(default=10)  # điểm mỗi item
+
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.title
 class AuditIssue(models.Model):
 
     audit = models.ForeignKey(
@@ -88,25 +114,58 @@ class AuditIssue(models.Model):
         related_name="issues"
     )
 
-    image = models.URLField(max_length=1000, blank=True, null=True) # ảnh lỗi
+    item = models.ForeignKey(   # ✅ BẮT BUỘC THÊM
+        AuditItem,
+        on_delete=models.SET_NULL,
+        null=True
+    )
 
-    title = models.CharField(max_length=255, blank=True, null=True)
+    category = models.ForeignKey(
+        AuditCategory,
+        on_delete=models.SET_NULL,
+        null=True
+    )
 
-    note = models.TextField(blank=True, null=True)
-
-    # 👉 ảnh khắc phục của nhân viên
-    fix_image = models.URLField(max_length=1000, blank=True, null=True)
-
-    # 👉 trạng thái QC đánh giá lại
     status = models.CharField(
         max_length=20,
         choices=[
-            ("pending", "Chờ xử lý"),
-            ("fixed", "Đã khắc phục"),
             ("pass", "Đạt"),
             ("fail", "Không đạt"),
         ],
-        default="pending"
+        default="pass"
     )
 
-    reviewed_at = models.DateTimeField(null=True, blank=True)
+    note = models.TextField(blank=True, null=True)
+
+    deduct_score = models.IntegerField(default=0)
+    
+class AuditIssueImage(models.Model):
+
+    issue = models.ForeignKey(
+        AuditIssue,
+        on_delete=models.CASCADE,
+        related_name="images"
+    )
+
+    image = models.URLField()
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+    
+class AuditFixImage(models.Model):
+
+    issue = models.ForeignKey(
+        AuditIssue,
+        on_delete=models.CASCADE,
+        related_name="fix_images"
+    )
+
+    image = models.URLField()
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+    
+
+    
