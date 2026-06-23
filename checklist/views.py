@@ -1633,16 +1633,20 @@ def format_sheet(sheet):
 
     sheet.freeze_panes = "A2"
 
+    # style từng ô
     for row in sheet.iter_rows():
 
         for cell in row:
 
             if isinstance(cell.value, (int, float)):
+
                 cell.alignment = Alignment(
                     horizontal="right",
                     vertical="center"
                 )
+
             else:
+
                 cell.alignment = Alignment(
                     horizontal="center",
                     vertical="center"
@@ -1650,13 +1654,16 @@ def format_sheet(sheet):
 
             cell.border = THIN
 
+    # header
     for cell in sheet[1]:
 
         cell.fill = HEADER_FILL
         cell.font = HEADER_FONT
 
+    # filter
     sheet.auto_filter.ref = sheet.dimensions
 
+    # auto width
     for col in sheet.columns:
 
         max_len = max(
@@ -1669,32 +1676,32 @@ def format_sheet(sheet):
         sheet.column_dimensions[
             col[0].column_letter
         ].width = max_len + 5
-        
+
+    # format số
     for row in sheet.iter_rows(min_row=2):
 
         for cell in row:
 
-        # nếu cột tên là "trung bình đạt"
-            for row in sheet.iter_rows(min_row=2):
+            header = str(
+                sheet.cell(
+                    row=1,
+                    column=cell.column
+                ).value or ""
+            ).lower()
 
-                for cell in row:
-
-                    header = str(
-                        sheet.cell(
-                            row=1,
-                            column=cell.column
-                        ).value or ""
-                    ).lower()
-
-                    if header == "% đạt":
-
-                        if isinstance(cell.value, (int, float)):
-
-                            cell.number_format = '0.0'
+            # chỉ format các cột % đạt
+            if header == "% đạt":
 
                 if isinstance(cell.value, (int, float)):
-                    cell.number_format = "0.0%"
-                    
+
+                    cell.number_format = "0.0"
+
+            # checklist TB/ngày
+            elif "tb/ngày" in header:
+
+                if isinstance(cell.value, (int, float)):
+
+                    cell.number_format = "0.0"
                     
 def auto_fit_columns(sheet):
 
