@@ -125,6 +125,7 @@ body{
     
 
 {% for issue in audit.issues.all %}
+    {% if issue.deduct_score > 0 %}
 
 <div class="card issue-card p-3">
 
@@ -242,14 +243,14 @@ body{
 
 </div>
 
-
+    {% endif %}
 {% endfor %}
 
 
 
 
 <!-- EMPTY -->
-{% if not audit.issues.all|length %}
+{% if audit.issues.all|length == 0 %}
 <div class="alert alert-success">
 🎉 Không có lỗi nào
 </div>
