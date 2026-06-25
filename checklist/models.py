@@ -131,6 +131,7 @@ class AuditIssue(models.Model):
         choices=[
             ("pass", "Đạt"),
             ("fail", "Không đạt"),
+            ("fixed", "Chờ QC duyệt"),
         ],
         default="pass"
     )

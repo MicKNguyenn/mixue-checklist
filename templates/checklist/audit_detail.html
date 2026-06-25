@@ -16,9 +16,9 @@ body{
 }
 
 .phone{
-    max-width:600px;
-    margin:auto;
-    padding:12px;
+    max-width: 520px;
+    margin: auto;
+    padding: 12px;
 }
 
 .card{
@@ -37,17 +37,24 @@ body{
     padding: 10px 14px;
 }
 
-.issue-img{
-    width:90px;
-    height:90px;
-    object-fit:cover;
-    border-radius:12px;
-    border:2px solid #eee;
-    cursor:pointer;
+.issue-card{
+    margin-bottom: 12px;
+    border-radius: 14px;
 }
 
-.issue-card{
-    border-radius:16px;
+.issue-content{
+    flex:1;
+    min-width:0;
+}
+
+.issue-img{
+    width: 70px;
+    height: 70px;
+    object-fit: cover;
+    border-radius: 10px;
+    cursor: pointer;
+    border: 2px solid #eee;
+    transition: 0.2s;
 }
 
 .issue-img:hover{
@@ -55,8 +62,9 @@ body{
 }
 
 .issue-row{
-    display: flex;
-    gap: 12px;
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
 }
 
 .issue-content{
@@ -113,20 +121,23 @@ body{
 
 
 <!-- ISSUES -->
+<div class="mb-2 fw-bold">❌ Lỗi phát hiện</div>
+    
+
+{% for issue in audit.issues.all %}
+
 <div class="card issue-card p-3">
 
     <div class="d-flex justify-content-between align-items-start">
 
-        <div>
-
-            <div class="fw-bold fs-5">
+        <div class="pe-2">
+            <div class="fw-bold fs-6">
                 {{ issue.item.title }}
             </div>
 
-            <div class="text-muted">
+            <div class="text-muted small">
                 {{ issue.category.title }}
             </div>
-
         </div>
 
         <span class="badge bg-danger">
@@ -157,12 +168,12 @@ body{
 
     <div class="mt-3">
 
-        <div class="text-secondary small">
+        <div class="small text-secondary">
             Nội dung
         </div>
 
-        <div class="bg-light rounded p-2">
-            {{ issue.note }}
+        <div class="bg-light p-2 rounded">
+            {{ issue.note|default:"Không có ghi chú" }}
         </div>
 
     </div>
@@ -170,46 +181,69 @@ body{
     <div class="mt-3">
 
         {% if issue.status == "fail" %}
-            <span class="badge bg-danger">
-                Chưa khắc phục
-            </span>
+
+        <span class="badge bg-danger">
+        🔴 Chưa khắc phục
+        </span>
+
         {% elif issue.status == "fixed" %}
-            <span class="badge bg-warning text-dark">
-                Chờ QC duyệt
-            </span>
+
+        <span class="badge bg-warning text-dark">
+        🟡 Chờ QC duyệt
+        </span>
+
         {% elif issue.status == "pass" %}
-            <span class="badge bg-success">
-                Đã duyệt
-            </span>
+
+        <span class="badge bg-success">
+        🟢 Đã khắc phục
+        </span>
+
         {% endif %}
 
     </div>
 
-    {% if issue.fix_images.all %}
 
-    <hr>
+    {% if issue.status == "fixed" %}
 
-    <div class="fw-bold text-success mb-2">
-        📸 Ảnh khắc phục
-    </div>
+    <form
+        method="POST"
+        action="{% url 'audit_review_issue' audit.id issue.id %}"
+        class="mt-3">
 
-    <div class="d-flex flex-wrap gap-2">
+        {% csrf_token %}
 
-        {% for img in issue.fix_images.all %}
+        <div class="d-flex gap-2">
 
-        <img src="{{ img.image }}"
-             class="issue-img"
-             data-bs-toggle="modal"
-             data-bs-target="#imgModal"
-             onclick="showImage(this.src)">
+            <button
+                type="submit"
+                name="status"
+                value="pass"
+                class="btn btn-success flex-fill">
 
-        {% endfor %}
+                ✅ Đạt
 
-    </div>
+            </button>
+
+            <button
+                type="submit"
+                name="status"
+                value="fail"
+                class="btn btn-danger flex-fill">
+
+                ❌ Chưa đạt
+
+            </button>
+
+        </div>
+
+    </form>
 
     {% endif %}
 
 </div>
+
+
+{% endfor %}
 
 
 
