@@ -29,9 +29,17 @@ body{
 }
 
 .issue-img{
-    width:100%;
-    border-radius:12px;
-    margin-top:8px;
+    width:70px;
+    height:70px;
+    object-fit:cover;
+    border-radius:10px;
+    border:2px solid #eee;
+    cursor:pointer;
+    transition:0.2s;
+}
+
+.issue-img:hover{
+    transform:scale(1.05);
 }
 
 .badge-fail{
@@ -89,75 +97,144 @@ body{
 
 
 <!-- TITLE -->
+
 <div class="mb-2 fw-bold text-danger">
 ⚠️ Danh sách lỗi cần xử lý
 </div>
 
-
-<!-- FAIL ONLY -->
 {% for issue in audit.issues.all %}
 
-{% if issue.status == "fail" %}
+{% if issue.status != "pass" %}
 
 <div class="card mb-3 p-3">
 
+```
 <div class="d-flex justify-content-between align-items-center mb-2">
 
-<div class="fw-bold text-dark">
-    Lỗi: {{ issue.item }}
+    <div>
+
+        <div class="fw-bold text-dark">
+            {{ issue.item.title }}
+        </div>
+
+        <div class="small text-muted">
+            {{ issue.category.title }}
+        </div>
+
+    </div>
+
+    <span class="badge badge-fail">
+        -{{ issue.deduct_score }} điểm
+    </span>
+
 </div>
-
-<div class="text-muted small">
-Lỗi #{{ forloop.counter }}
-</div>
-
-<span class="badge badge-fail">
--{{ issue.deduct_score }} điểm
-</span>
-
-</div>
-
 
 <!-- ẢNH LỖI -->
-{% for img in issue.images.all %}
-<div class="section-title">Ảnh lỗi</div>
-<img src="{{ img.image }}"
-    class="issue-img">
-{% endfor %}
 
-<!-- NỘI DUNG -->
-<div class="section-title mt-2">Nội dung</div>
-
-<div class="fw-bold text-dark">
-   {{ issue.note }}
+<div class="section-title">
+    📸 Ảnh lỗi
 </div>
 
+<div class="d-flex flex-wrap gap-2 mb-3">
 
-<!-- UPLOAD FIX -->
+    {% for img in issue.images.all %}
+
+    <img src="{{ img.image }}"
+        class="issue-img"
+        data-bs-toggle="modal"
+        data-bs-target="#imgModal"
+        onclick="showImage(this.src)">
+
+    {% endfor %}
+
+</div>
+
+<!-- NỘI DUNG -->
+
+<div class="section-title">
+    Nội dung lỗi
+</div>
+
+<div class="fw-bold text-dark">
+    {{ issue.note }}
+</div>
+
+<!-- STATUS -->
+
+<div class="mt-2">
+
+    {% if issue.status == "fail" %}
+
+        <span class="badge bg-danger">
+            Chưa khắc phục
+        </span>
+
+    {% elif issue.status == "fixed" %}
+
+        <span class="badge bg-warning text-dark">
+            Đang chờ QC duyệt
+        </span>
+
+    {% endif %}
+
+</div>
+
+<!-- ẢNH ĐÃ GỬI -->
+
+{% if issue.fix_images.all %}
+
+<hr>
+
+<div class="fw-bold text-success mb-2">
+    📸 Ảnh đã gửi khắc phục
+</div>
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+
+    {% for img in issue.fix_images.all %}
+
+    <img src="{{ img.image }}"
+        class="issue-img"
+        data-bs-toggle="modal"
+        data-bs-target="#imgModal"
+        onclick="showImage(this.src)">
+
+    {% endfor %}
+
+</div>
+
+{% endif %}
+
+<!-- FORM UPLOAD -->
+
+{% if issue.status == "fail" %}
+
 <hr>
 
 <div class="section-title text-primary">
-📸 Upload ảnh khắc phục
+    📤 Upload ảnh khắc phục
 </div>
 
-<form class="fix-form" data-id="{{ issue.id }}">
+<form class="fix-form"
+    data-id="{{ issue.id }}">
 
-{% csrf_token %}
+    {% csrf_token %}
 
-<input type="file"
-name="fix_image"
-accept="image/*"
-multiple
-class="form-control mb-2"
-required>
+    <input type="file"
+        name="fix_image"
+        accept="image/*"
+        multiple
+        class="form-control mb-2"
+        required>
 
-<button class="btn btn-success w-100">
-Gửi ảnh khắc phục
-</button>
-
-
+    <button class="btn btn-success w-100">
+        Gửi ảnh khắc phục
+    </button>
 
 </form>
+
+{% endif %}
+```
 
 </div>
 
@@ -165,28 +242,70 @@ Gửi ảnh khắc phục
 
 {% endfor %}
 
-
-<!-- EMPTY -->
-{% if audit.issues.all|length == 0 %}
-<div class="alert alert-success text-center">
-🎉 Không có lỗi nào
-</div>
-{% endif %}
-
-{% else %}
+{% if not audit %}
 
 <div class="alert alert-warning text-center">
 Không có dữ liệu audit
 </div>
 
 {% endif %}
-<a href="javascript:history.back()" class="btn btn-outline-secondary w-100 mt-2">
-⬅ Quay lại
-</a>
+
+<a href="javascript:history.back()"
+class="btn btn-outline-secondary w-100 mt-2">
+⬅ Quay lại </a>
+
 </div>
 
+<!-- MODAL -->
+
+<div class="modal fade"
+    id="imgModal"
+    tabindex="-1">
+
+```
+<div class="modal-dialog modal-dialog-centered">
+
+    <div class="modal-content">
+
+        <div class="modal-header">
+
+            <h5 class="modal-title">
+                Xem ảnh
+            </h5>
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal">
+            </button>
+
+        </div>
+
+        <div class="modal-body">
+
+            <img id="modalImage"
+                style="
+                width:100%;
+                border-radius:12px;
+                ">
+
+        </div>
+
+    </div>
+
+</div>
+```
+
+</div>
 
 <script>
+
+function showImage(src){
+
+    document.getElementById(
+        "modalImage"
+    ).src = src;
+
+}
 
 document.querySelectorAll(".fix-form").forEach(form => {
 
@@ -206,6 +325,7 @@ document.querySelectorAll(".fix-form").forEach(form => {
             alert("Chọn ảnh trước");
 
             return;
+
         }
 
         const formData = new FormData();
@@ -267,6 +387,8 @@ document.querySelectorAll(".fix-form").forEach(form => {
 });
 
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 </html>

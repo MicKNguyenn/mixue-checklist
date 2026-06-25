@@ -16,9 +16,9 @@ body{
 }
 
 .phone{
-    max-width: 520px;
-    margin: auto;
-    padding: 12px;
+    max-width:600px;
+    margin:auto;
+    padding:12px;
 }
 
 .card{
@@ -37,19 +37,17 @@ body{
     padding: 10px 14px;
 }
 
-.issue-card{
-    margin-bottom: 12px;
-    border-radius: 14px;
+.issue-img{
+    width:90px;
+    height:90px;
+    object-fit:cover;
+    border-radius:12px;
+    border:2px solid #eee;
+    cursor:pointer;
 }
 
-.issue-img{
-    width: 70px;
-    height: 70px;
-    object-fit: cover;
-    border-radius: 10px;
-    cursor: pointer;
-    border: 2px solid #eee;
-    transition: 0.2s;
+.issue-card{
+    border-radius:16px;
 }
 
 .issue-img:hover{
@@ -115,155 +113,103 @@ body{
 
 
 <!-- ISSUES -->
-<div class="mb-2 fw-bold">❌ Lỗi phát hiện</div>
-
-{% for issue in audit.issues.all %}
-
-{% if issue.status != "pass" %}
-
 <div class="card issue-card p-3">
 
-    <div class="issue-row">
+    <div class="d-flex justify-content-between align-items-start">
 
-        <!-- ẢNH LỖI -->
         <div>
 
-            {% for img in issue.images.all %}
+            <div class="fw-bold fs-5">
+                {{ issue.item.title }}
+            </div>
 
-            <img src="{{ img.image }}"
-                 class="issue-img mb-1"
-                 data-bs-toggle="modal"
-                 data-bs-target="#imgModal"
-                 onclick="showImage(this.src)">
-
-            {% endfor %}
+            <div class="text-muted">
+                {{ issue.category.title }}
+            </div>
 
         </div>
 
-        <div class="issue-content">
+        <span class="badge bg-danger">
+            -{{ issue.deduct_score }} điểm
+        </span>
 
-            <div class="d-flex justify-content-between align-items-start">
+    </div>
 
-                <div>
+    <hr>
 
-                    <div class="fw-bold text-dark">
-                        {{ issue.item.title }}
-                    </div>
+    <div class="fw-bold mb-2">
+        📸 Ảnh lỗi
+    </div>
 
-                    <div class="small text-muted">
-                        {{ issue.category.title }}
-                    </div>
+    <div class="d-flex flex-wrap gap-2">
 
-                </div>
+        {% for img in issue.images.all %}
 
-                <span class="badge bg-danger badge-minus">
-                    -{{ issue.deduct_score }} điểm
-                </span>
+        <img src="{{ img.image }}"
+             class="issue-img"
+             data-bs-toggle="modal"
+             data-bs-target="#imgModal"
+             onclick="showImage(this.src)">
 
-            </div>
+        {% endfor %}
 
-            <div class="small-text mt-2">
-                Nội dung
-            </div>
+    </div>
 
-            <div class="bg-light p-2 rounded">
-                {{ issue.note }}
-            </div>
+    <div class="mt-3">
 
-            <!-- STATUS -->
+        <div class="text-secondary small">
+            Nội dung
+        </div>
 
-            <div class="mt-2">
-
-                {% if issue.status == "fail" %}
-
-                <span class="badge bg-danger">
-                    Chưa khắc phục
-                </span>
-
-                {% elif issue.status == "fixed" %}
-
-                <span class="badge bg-warning text-dark">
-                    Chờ QC duyệt
-                </span>
-
-                {% endif %}
-
-            </div>
-
-            <!-- ẢNH KHẮC PHỤC -->
-
-            {% if issue.fix_images.all %}
-
-            <hr>
-
-            <div class="fw-bold text-success mb-2">
-                📸 Ảnh khắc phục
-            </div>
-
-            <div class="d-flex flex-wrap gap-2">
-
-                {% for img in issue.fix_images.all %}
-
-                <img src="{{ img.image }}"
-                     class="issue-img"
-                     data-bs-toggle="modal"
-                     data-bs-target="#imgModal"
-                     onclick="showImage(this.src)">
-
-                {% endfor %}
-
-            </div>
-
-            {% endif %}
-
-            <!-- QC DUYỆT -->
-
-            {% if issue.status == "fixed" %}
-
-            <form
-                method="POST"
-                action="{% url 'audit_review_issue' audit.id issue.id %}"
-                class="mt-3">
-
-                {% csrf_token %}
-
-                <div class="d-flex gap-2">
-
-                    <button
-                        type="submit"
-                        name="status"
-                        value="pass"
-                        class="btn btn-success flex-fill">
-
-                        ✅ Đạt
-
-                    </button>
-
-                    <button
-                        type="submit"
-                        name="status"
-                        value="fail"
-                        class="btn btn-danger flex-fill">
-
-                        ❌ Chưa đạt
-
-                    </button>
-
-                </div>
-
-            </form>
-
-            {% endif %}
-
+        <div class="bg-light rounded p-2">
+            {{ issue.note }}
         </div>
 
     </div>
 
+    <div class="mt-3">
+
+        {% if issue.status == "fail" %}
+            <span class="badge bg-danger">
+                Chưa khắc phục
+            </span>
+        {% elif issue.status == "fixed" %}
+            <span class="badge bg-warning text-dark">
+                Chờ QC duyệt
+            </span>
+        {% elif issue.status == "pass" %}
+            <span class="badge bg-success">
+                Đã duyệt
+            </span>
+        {% endif %}
+
+    </div>
+
+    {% if issue.fix_images.all %}
+
+    <hr>
+
+    <div class="fw-bold text-success mb-2">
+        📸 Ảnh khắc phục
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+
+        {% for img in issue.fix_images.all %}
+
+        <img src="{{ img.image }}"
+             class="issue-img"
+             data-bs-toggle="modal"
+             data-bs-target="#imgModal"
+             onclick="showImage(this.src)">
+
+        {% endfor %}
+
+    </div>
+
+    {% endif %}
+
 </div>
-
-{% endif %}
-
-{% endfor %}
 
 
 
