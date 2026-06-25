@@ -24,6 +24,7 @@ body{
     border:none;
     border-radius:16px;
     box-shadow:0 4px 10px rgba(0,0,0,0.05);
+    margin-bottom:12px;
 }
 
 .issue-img{
@@ -53,7 +54,8 @@ body{
 
 {% if audit %}
 
-<div class="card p-3 mb-3">
+<!-- HEADER -->
+<div class="card p-3">
 
     <h5 class="text-primary">📋 Điểm QC</h5>
 
@@ -76,14 +78,15 @@ body{
 </div>
 
 <div class="fw-bold text-danger mb-2">
-⚠️ Danh sách lỗi
+⚠️ Lỗi cần xử lý
 </div>
 
+<!-- ISSUES -->
 {% for issue in audit.issues.all %}
 
-{% if issue.status != "pass" %}
+{% if issue.deduct_score > 0 %}
 
-<div class="card p-3 mb-3">
+<div class="card p-3">
 
     <div class="d-flex justify-content-between">
 
@@ -91,7 +94,6 @@ body{
             <div class="fw-bold">
                 {{ issue.item.title|default:"-" }}
             </div>
-
             <div class="text-muted small">
                 {{ issue.category.title|default:"-" }}
             </div>
@@ -100,40 +102,69 @@ body{
         <span class="badge badge-fail">
             -{{ issue.deduct_score }} điểm
         </span>
-
     </div>
 
+    <!-- IMAGES -->
     <div class="mt-2">
         <div class="section-title">📸 Ảnh lỗi</div>
 
         <div class="d-flex gap-2 flex-wrap">
-
             {% for img in issue.images.all %}
-            <img src="{{ img.image }}" class="issue-img">
+                <img src="{{ img.image }}" class="issue-img">
             {% endfor %}
-
         </div>
     </div>
 
+    <!-- NOTE -->
     <div class="mt-2">
         <div class="section-title">Nội dung</div>
-        <div>{{ issue.note }}</div>
+        <div>{{ issue.note|default:"-" }}</div>
     </div>
 
+    <!-- STATUS -->
     <div class="mt-2">
 
         {% if issue.status == "fail" %}
-        <span class="badge bg-danger">Chưa khắc phục</span>
-
+            <span class="badge bg-danger">Chưa khắc phục</span>
         {% elif issue.status == "fixed" %}
-        <span class="badge bg-warning text-dark">Chờ QC duyệt</span>
+            <span class="badge bg-warning text-dark">Chờ QC duyệt</span>
+        {% elif issue.status == "pass" %}
+            <span class="badge bg-success">Đã đạt</span>
         {% endif %}
 
     </div>
 
+    <!-- UPLOAD FIX (QUAN TRỌNG) -->
+    {% if issue.status == "fail" %}
+
+    <hr>
+
+    <div class="section-title text-primary">
+        📤 Upload ảnh khắc phục
+    </div>
+
+    <form class="fix-form" data-id="{{ issue.id }}">
+
+        {% csrf_token %}
+
+        <input type="file"
+               name="fix_image"
+               multiple
+               accept="image/*"
+               class="form-control mb-2">
+
+        <button class="btn btn-success w-100">
+            Gửi ảnh khắc phục
+        </button>
+
+    </form>
+
+    {% endif %}
+
 </div>
 
 {% endif %}
+
 {% endfor %}
 
 {% else %}
@@ -145,6 +176,46 @@ Không có dữ liệu audit
 {% endif %}
 
 </div>
+
+<script>
+document.querySelectorAll(".fix-form").forEach(form => {
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const issueId = form.dataset.id;
+        const files = form.querySelector("input").files;
+
+        if (!files.length) {
+            alert("Chọn ảnh trước");
+            return;
+        }
+
+        const fd = new FormData();
+
+        for (let f of files){
+            fd.append("fix_image", f);
+        }
+
+        fd.append("csrfmiddlewaretoken",
+            form.querySelector("[name=csrfmiddlewaretoken]").value
+        );
+
+        const res = await fetch(`/staff/issue/${issueId}/fix/`, {
+            method: "POST",
+            body: fd
+        });
+
+        const data = await res.json();
+
+        if (data.success){
+            alert("Đã gửi ảnh khắc phục");
+            location.reload();
+        } else {
+            alert("Upload lỗi");
+        }
+    });
+});
+</script>
 
 </body>
 </html>

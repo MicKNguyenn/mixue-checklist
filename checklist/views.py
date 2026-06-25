@@ -1058,17 +1058,20 @@ def staff_dashboard(request):
         "audit": audit
     })
     
-def staff_fix_issue(request,id):
+def staff_fix_issue(request, id):
 
-    if "store_id" not in request.session:
+    if request.method != "POST":
+        return JsonResponse({"success": False, "message": "Invalid method"})
 
-        return JsonResponse({
-            "success":False
-        })
+    store_id = request.session.get("store_id")
 
-    store = Store.objects.get(
-        id=request.session["store_id"]
-    )
+    if not store_id:
+        return JsonResponse({"success": False, "message": "No session"})
+
+    store = Store.objects.filter(id=store_id).first()
+
+    if not store:
+        return JsonResponse({"success": False, "message": "Store not found"})
 
     issue = get_object_or_404(
         AuditIssue,
@@ -1077,16 +1080,13 @@ def staff_fix_issue(request,id):
     )
 
     try:
+        files = request.FILES.getlist("fix_image")
 
-        files = request.FILES.getlist(
-            "fix_image"
-        )
+        if not files:
+            return JsonResponse({"success": False, "message": "No files"})
 
         for file in files:
-
-            upload = cloudinary.uploader.upload(
-                file
-            )
+            upload = cloudinary.uploader.upload(file)
 
             AuditFixImage.objects.create(
                 issue=issue,
@@ -1096,15 +1096,12 @@ def staff_fix_issue(request,id):
         issue.status = "fixed"
         issue.save()
 
-        return JsonResponse({
-            "success":True
-        })
+        return JsonResponse({"success": True})
 
     except Exception as e:
-
         return JsonResponse({
-            "success":False,
-            "message":str(e)
+            "success": False,
+            "message": str(e)
         })
         
 def update_audit_score(audit):
