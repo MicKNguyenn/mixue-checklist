@@ -123,13 +123,15 @@ body{
 <div class="issue-row">
 
 <!-- THUMB IMAGE -->
-{% if issue.image %}
-<img src="{{ issue.image }}"
-class="issue-img"
-data-bs-toggle="modal"
-data-bs-target="#imgModal"
-onclick="showImage(this.src)">
-{% endif %}
+{% for img in issue.images.all %}
+
+<img src="{{ img.image }}"
+     class="issue-img"
+     data-bs-toggle="modal"
+     data-bs-target="#imgModal"
+     onclick="showImage(this.src)">
+
+{% endfor %}
 
 <!-- CONTENT -->
 <div class="issue-content">
@@ -195,14 +197,31 @@ Lỗi #{{ forloop.counter }}
       <div class="modal-header">
         <h5 class="modal-title">Ảnh lỗi</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
+    </div>
 
-      <div class="modal-body">
+    {% if issue.fix_images.all %}
+
+    <hr>
+
+    <div class="fw-bold text-success">
+    Ảnh khắc phục
+    </div>
+
+    {% for img in issue.fix_images.all %}
+
+    <img src="{{ img.image }}"
+        class="issue-img">
+
+    {% endfor %}
+
+    {% endif %}
+    
+    <div class="modal-body">
         <img id="modalImage" class="modal-img">
-      </div>
+    </div>
 
     </div>
-  </div>
+    </div>
 </div>
 
 

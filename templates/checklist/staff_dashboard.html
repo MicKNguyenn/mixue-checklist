@@ -119,14 +119,11 @@ Lỗi #{{ forloop.counter }}
 
 
 <!-- ẢNH LỖI -->
-{% if issue.image %}
-
+{% for img in issue.images.all %}
 <div class="section-title">Ảnh lỗi</div>
-
-<img src="{{ issue.image }}" class="issue-img">
-
-{% endif %}
-
+<img src="{{ img.image }}"
+    class="issue-img">
+{% endfor %}
 
 <!-- NỘI DUNG -->
 <div class="section-title mt-2">Nội dung</div>

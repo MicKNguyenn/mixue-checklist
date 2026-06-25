@@ -1037,53 +1037,43 @@ def staff_dashboard(request):
         "audit": audit
     })
     
-def staff_fix_issue(request, id):
+def staff_fix_issue(request,id):
 
-    if "store_id" not in request.session:
-        return JsonResponse({
-            "success": False,
-            "message": "Chưa đăng nhập"
-        })
-
-    store = Store.objects.get(
+    store=Store.objects.get(
         id=request.session["store_id"]
     )
 
-    issue = get_object_or_404(
+    issue=get_object_or_404(
         AuditIssue,
         id=id,
         audit__store=store
     )
 
-    try:
+    fix_file=request.FILES.get(
+        "fix_image"
+    )
 
-        fix_file = request.FILES.get("fix_image")
-
-        if not fix_file:
-            return JsonResponse({
-                "success": False,
-                "message": "Không có file"
-            })
-
-        upload = cloudinary.uploader.upload(fix_file)
-
-        issue.fix_image = upload["secure_url"]
-        issue.note = request.POST.get("note", "") 
-        issue.status = "pending"  # hoặc "fixed" nếu bạn muốn giữ flow cũ
-        issue.save()
+    if not fix_file:
 
         return JsonResponse({
-            "success": True
+            "success":False
         })
 
-    except Exception as e:
+    upload=cloudinary.uploader.upload(
+        fix_file
+    )
 
-        print("LỖI:", e)
+    AuditFixImage.objects.create(
+        issue=issue,
+        image=upload["secure_url"]
+    )
 
-        return JsonResponse({
-            "success": False,
-            "message": str(e)
-        })
+    issue.status="fixed"
+    issue.save()
+
+    return JsonResponse({
+        "success":True
+    })
         
 def update_audit_score(audit):
 
@@ -1126,24 +1116,28 @@ def staff_dashboard_by_audit(request, audit_id):
         }
     )
     
-def review_issue(request, audit_id, issue_id):
+def review_issue(request,audit_id,issue_id):
 
-    issue = get_object_or_404(
+    issue=get_object_or_404(
         AuditIssue,
-        id=issue_id,
-        audit_id=audit_id
+        id=issue_id
     )
 
-    if request.method == "POST":
+    if request.method=="POST":
 
-        status = request.POST.get("status")
+        status=request.POST.get("status")
 
-        issue.status = status
+        issue.status=status
+
         issue.save()
 
-        update_audit_score(issue.audit)
+        update_audit_score(
+            issue.audit
+        )
 
-    return redirect(f"/audit/{audit_id}/")
+    return redirect(
+        f"/audit/{audit_id}/"
+    )
 
 def audit_review_issue(request, audit_id, issue_id):
 
