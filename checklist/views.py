@@ -1129,16 +1129,23 @@ def store_audit_history(request, store_id):
     
 def staff_dashboard_by_audit(request, audit_id):
 
-    if "store_id" not in request.session:
+    store_id = request.session.get("store_id")
+
+    if not store_id:
         return redirect("/")
 
-    store = Store.objects.get(id=request.session["store_id"])
+    store = Store.objects.filter(id=store_id).first()
 
-    audit = get_object_or_404(
-        Audit,
+    if not store:
+        return redirect("/")
+
+    audit = Audit.objects.filter(
         id=audit_id,
         store=store
-    )
+    ).first()
+
+    if not audit:
+        return redirect("/store/%s/audits/" % store.id)
 
     return render(
         request,
