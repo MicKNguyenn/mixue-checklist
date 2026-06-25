@@ -122,11 +122,11 @@ body{
 
 <!-- ISSUES -->
 <div class="mb-2 fw-bold">❌ Lỗi phát hiện</div> 
-{% comment %} <a href="{% url 'export_audit_pdf' audit.id %}" 
-   class="btn btn-outline-danger mb-3 w-100">
+<a href="{% url 'export_audit_pdf' audit.id %}" 
+    class="btn btn-outline-danger mb-3 w-100">
 
     📄 Xuất PDF báo cáo QC
-</a> {% endcomment %}
+</a> 
     
 
 {% for issue in audit.issues.all %}

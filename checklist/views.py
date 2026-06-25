@@ -2023,13 +2023,11 @@ def export_kpi_auditqc_excel(request):
 def export_audit_pdf(request, audit_id):
 
     import os
-    import requests
-    from io import BytesIO
 
     from django.http import HttpResponse
     from django.conf import settings
 
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib import colors
     from reportlab.pdfbase import pdfmetrics
@@ -2045,11 +2043,11 @@ def export_audit_pdf(request, audit_id):
     doc = SimpleDocTemplate(response)
     elements = []
 
-    # ================= FONT (ROBOTO) =================
+    # ================= FONT =================
     font_path = os.path.join(settings.BASE_DIR, "static/fonts/Roboto-Regular.ttf")
     pdfmetrics.registerFont(TTFont("Roboto", font_path))
 
-    # ================= STYLES =================
+    # ================= STYLE =================
     styles = getSampleStyleSheet()
 
     styles.add(ParagraphStyle(
@@ -2065,8 +2063,8 @@ def export_audit_pdf(request, audit_id):
     )
     elements.append(Spacer(1, 12))
 
-    # ================= TABLE DATA =================
-    data = [["Các mục", "Lỗi", "Trạng thái", "Ảnh lỗi"]]
+    # ================= TABLE DATA (NO IMAGE COLUMN) =================
+    data = [["Các mục", "Lỗi", "Trạng thái"]]
 
     seen_category = None
 
@@ -2090,26 +2088,14 @@ def export_audit_pdf(request, audit_id):
             category_display = category
             seen_category = category
 
-        # image
-        img_cell = "-"
-
-        try:
-            if issue.images.exists():
-                img_url = issue.images.first().image
-                img_data = requests.get(img_url, timeout=5).content
-                img_cell = Image(BytesIO(img_data), width=50, height=50)
-        except:
-            img_cell = "-"
-
         data.append([
             category_display,
             item,
-            status_text,
-            img_cell
+            status_text
         ])
 
     # ================= TABLE =================
-    table = Table(data, colWidths=[140, 200, 90, 80])
+    table = Table(data, colWidths=[160, 250, 120])
 
     table.setStyle(TableStyle([
 
@@ -2117,14 +2103,14 @@ def export_audit_pdf(request, audit_id):
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1F4E79")),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
 
-        # FONT UNICODE (QUAN TRỌNG)
+        # FONT
         ("FONTNAME", (0, 0), (-1, -1), "Roboto"),
 
         ("ALIGN", (0, 0), (-1, 0), "CENTER"),
         ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
 
-        # STATUS ALIGN
+        # STATUS CENTER
         ("ALIGN", (2, 1), (2, -1), "CENTER"),
     ]))
 
