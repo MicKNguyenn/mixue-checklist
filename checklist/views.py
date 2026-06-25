@@ -34,11 +34,22 @@ from .models import Audit, AuditIssue
 from django.core.paginator import Paginator
 from django.contrib import messages
 from django.db.models import Q, Exists, OuterRef  
-from django.db.models import Count
 from datetime import datetime
 from openpyxl import Workbook
 from openpyxl.styles import *
 from django.db.models import Count
+from django.db.models import Avg, Count
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment
+from django.http import HttpResponse
+from django.db.models import Avg, Count
+
+from django.http import HttpResponse
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+import requests
+from io import BytesIO
 
 
 def dashboard(request):
@@ -1810,5 +1821,315 @@ def auto_fit_columns(sheet):
 
         sheet.column_dimensions[column].width = adjusted_width
         
+def export_kpi_auditqc_excel(request):
 
-        
+    start = request.GET.get("start")
+    end = request.GET.get("end")
+
+    audits = Audit.objects.all()
+
+    if start and end:
+        audits = audits.filter(created_at__date__range=[start, end])
+
+    avg_all = audits.aggregate(avg=Avg("score"))["avg"] or 0
+
+    store_scores = (
+        audits.values("store__id", "store__code")
+        .annotate(avg_score=Avg("score"))
+        .order_by("-avg_score")
+    )
+
+    issues = AuditIssue.objects.filter(audit__in=audits)
+
+    issue_count = (
+        issues.values("item__title")
+        .annotate(total=Count("id"))
+        .order_by("-total")
+    )
+
+    repeated_issues_raw = (
+        issues.values("audit__store__code", "item__title")
+        .annotate(total=Count("id"))
+        .filter(total__gte=2)
+        .order_by("audit__store__code")
+    )
+
+    grouped = {}
+    for r in repeated_issues_raw:
+        grouped.setdefault(r["audit__store__code"], []).append(r)
+
+    # ================= STYLE =================
+    header_fill = PatternFill("solid", fgColor="1F4E79")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    thin_border = Border(
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin"),
+    )
+
+    center = Alignment(horizontal="center", vertical="center")
+
+    def style_row(ws, row):
+        for cell in row:
+            cell.border = thin_border
+            cell.alignment = center
+
+    wb = openpyxl.Workbook()
+
+    # ================= SHEET 1 =================
+    ws1 = wb.active
+    ws1.title = "KPI Tổng"
+
+    ws1.append(["Cửa hàng", "Điểm TB", "Rank"])
+
+    for cell in ws1[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = center
+        cell.border = thin_border
+
+    rank = 1
+
+    for s in store_scores:
+
+        row = [s["store__code"], round(s["avg_score"], 2), rank]
+        ws1.append(row)
+
+        current_row = ws1[ws1.max_row]
+
+        # border + center
+        for c in current_row:
+            c.border = thin_border
+            c.alignment = center
+
+        # 🎨 RANK COLOR
+        if rank == 1:
+            fill = PatternFill("solid", fgColor="FFD700")  # vàng
+        elif rank == 2:
+            fill = PatternFill("solid", fgColor="C0C0C0")  # bạc
+        elif rank == 3:
+            fill = PatternFill("solid", fgColor="CD7F32")  # đồng
+        else:
+            fill = None
+
+        if fill:
+            for c in current_row:
+                c.fill = fill
+
+        rank += 1
+
+    # ================= SHEET 2 =================
+    ws2 = wb.create_sheet("Lỗi phổ biến")
+    ws2.append(["Lỗi", "Số lần"])
+
+    for cell in ws2[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = thin_border
+        cell.alignment = center
+
+    for i in issue_count:
+        ws2.append([i["item__title"], i["total"]])
+        style_row(ws2, ws2[ws2.max_row])
+
+    # ================= SHEET 3 =================
+    ws3 = wb.create_sheet("Lỗi lặp lại")
+
+    ws3.append(["Cửa hàng", "Lỗi", "Số lần"])
+
+    header_fill = PatternFill("solid", fgColor="1F4E79")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    for cell in ws3[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center")
+
+    thin_border = Border(
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin"),
+    )
+
+    row_start = 2
+
+    for store_code, items in grouped.items():
+
+        start_row = row_start
+
+        for i, item in enumerate(items):
+
+            total = item["total"]
+
+            ws3.append([
+                store_code if i == 0 else "",
+                item["item__title"],
+                total
+            ])
+
+            # ===== STYLE CELL =====
+            for col in range(1, 4):
+                cell = ws3.cell(row=row_start, column=col)
+                cell.border = thin_border
+                cell.alignment = Alignment(vertical="center")
+
+                # 🔴 nếu lỗi > 10 thì đỏ
+                if col == 3:
+
+                    if total > 10:
+                        cell.fill = PatternFill("solid", fgColor="FF4D4D")  # đỏ
+                        cell.font = Font(color="FFFFFF", bold=True)
+
+                    elif total >= 5:
+                        cell.fill = PatternFill("solid", fgColor="FFC000")  # vàng
+                        cell.font = Font(color="000000", bold=True)
+
+                    else:
+                        cell.fill = PatternFill("solid", fgColor="92D050")  # xanh
+                        cell.font = Font(color="000000", bold=True)
+
+            row_start += 1
+
+        end_row = row_start - 1
+
+        # ===== MERGE SAFE =====
+        if len(items) > 1 and start_row >= 2 and end_row >= start_row:
+
+            ws3.merge_cells(
+                start_row=start_row,
+                end_row=end_row,
+                start_column=1,
+                end_column=1
+            )
+
+            ws3.cell(row=start_row, column=1).alignment = Alignment(
+                horizontal="center",
+                vertical="center"
+            )
+            
+    # ================= EXPORT =================
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+    response["Content-Disposition"] = 'attachment; filename="AUDIT_QC_REPORT.xlsx"'
+
+    wb.save(response)
+    return response
+
+def export_audit_pdf(request, audit_id):
+
+    import os
+    import requests
+    from io import BytesIO
+
+    from django.http import HttpResponse
+    from django.conf import settings
+
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib import colors
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    # ================= DATA =================
+    audit = Audit.objects.get(id=audit_id)
+    issues = audit.issues.select_related("item", "category").all()
+
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="audit_{audit_id}.pdf"'
+
+    doc = SimpleDocTemplate(response)
+    elements = []
+
+    # ================= FONT (ROBOTO) =================
+    font_path = os.path.join(settings.BASE_DIR, "static/fonts/Roboto-Regular.ttf")
+    pdfmetrics.registerFont(TTFont("Roboto", font_path))
+
+    # ================= STYLES =================
+    styles = getSampleStyleSheet()
+
+    styles.add(ParagraphStyle(
+        name="VN_Title",
+        parent=styles["Title"],
+        fontName="Roboto",
+        fontSize=16,
+    ))
+
+    # ================= TITLE =================
+    elements.append(
+        Paragraph(f"BÁO CÁO AUDIT - CH {audit.store.code}", styles["VN_Title"])
+    )
+    elements.append(Spacer(1, 12))
+
+    # ================= TABLE DATA =================
+    data = [["Các mục", "Lỗi", "Trạng thái", "Ảnh lỗi"]]
+
+    seen_category = None
+
+    for issue in issues:
+
+        category = issue.category.title if issue.category else "-"
+        item = issue.item.title if issue.item else "-"
+
+        # status
+        if issue.status == "pass":
+            status_text = "Đạt"
+        elif issue.status == "fail":
+            status_text = "Không đạt"
+        else:
+            status_text = "Chờ QC"
+
+        # merge category giả
+        if category == seen_category:
+            category_display = ""
+        else:
+            category_display = category
+            seen_category = category
+
+        # image
+        img_cell = "-"
+
+        try:
+            if issue.images.exists():
+                img_url = issue.images.first().image
+                img_data = requests.get(img_url, timeout=5).content
+                img_cell = Image(BytesIO(img_data), width=50, height=50)
+        except:
+            img_cell = "-"
+
+        data.append([
+            category_display,
+            item,
+            status_text,
+            img_cell
+        ])
+
+    # ================= TABLE =================
+    table = Table(data, colWidths=[140, 200, 90, 80])
+
+    table.setStyle(TableStyle([
+
+        # HEADER
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1F4E79")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+
+        # FONT UNICODE (QUAN TRỌNG)
+        ("FONTNAME", (0, 0), (-1, -1), "Roboto"),
+
+        ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+
+        # STATUS ALIGN
+        ("ALIGN", (2, 1), (2, -1), "CENTER"),
+    ]))
+
+    elements.append(table)
+
+    doc.build(elements)
+
+    return response

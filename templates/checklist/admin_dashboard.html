@@ -93,8 +93,28 @@ body{
             <a href="/kpi-dashboard/" class="btn btn-info w-100 mt-2">
                 📋 Xem biểu bảng checklist hàng ngày
             </a>
-        </form>
 
+            
+        </form>
+        <div class="card mt-3 p-3">
+
+                <h6>📋 Xuất báo cáo audit QC</h6>
+
+                <form action="/export-kpi-auditqc/" method="GET">
+
+                    <label>Từ ngày</label>
+                    <input type="date" name="start" class="form-control mb-2">
+
+                    <label>Đến ngày</label>
+                    <input type="date" name="end" class="form-control mb-2">
+
+                    <button class="btn btn-success w-100">
+                        📥 Xuất Excel báo cáo QC
+                    </button>
+
+                </form>
+
+            </div>
     </div>
 
 </div>

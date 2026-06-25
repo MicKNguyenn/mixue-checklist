@@ -132,5 +132,15 @@ urlpatterns = [
         name="staff_dashboard_by_audit"
     ),
     
+    path(
+        "export-kpi-auditqc/",
+        views.export_kpi_auditqc_excel,
+        name="export_kpi_auditqc_excel"
+    ),
+    
+    path("audit/<int:audit_id>/pdf/", 
+        views.export_audit_pdf,
+        name="export_audit_pdf"
+    ),
 ]
     
