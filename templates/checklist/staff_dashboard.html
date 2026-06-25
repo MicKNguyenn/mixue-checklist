@@ -143,20 +143,19 @@ body{
         📤 Upload ảnh khắc phục
     </div>
 
-    <form class="fix-form" data-id="{{ issue.id }}">
-
+    <form class="fix-form" data-id="{{ issue.id }}" enctype="multipart/form-data">
         {% csrf_token %}
 
         <input type="file"
-               name="fix_image"
-               multiple
-               accept="image/*"
-               class="form-control mb-2">
+            name="fix_image"
+            multiple
+            class="form-control mb-2"
+            accept="image/*"
+            required>
 
-        <button class="btn btn-success w-100">
+        <button type="submit" class="btn btn-success w-100">
             Gửi ảnh khắc phục
         </button>
-
     </form>
 
     {% endif %}
@@ -179,39 +178,45 @@ Không có dữ liệu audit
 
 <script>
 document.querySelectorAll(".fix-form").forEach(form => {
-    form.addEventListener("submit", async (e) => {
+    form.addEventListener("submit", async function(e) {
         e.preventDefault();
 
-        const issueId = form.dataset.id;
-        const files = form.querySelector("input").files;
+        const issueId = this.dataset.id;
+        const input = this.querySelector("input[type=file]");
+        const files = input.files;
 
         if (!files.length) {
-            alert("Chọn ảnh trước");
+            alert("Chưa chọn ảnh");
             return;
         }
 
-        const fd = new FormData();
+        const formData = new FormData();
 
-        for (let f of files){
-            fd.append("fix_image", f);
+        for (let f of files) {
+            formData.append("fix_image", f);
         }
 
-        fd.append("csrfmiddlewaretoken",
-            form.querySelector("[name=csrfmiddlewaretoken]").value
-        );
+        const csrf = this.querySelector("[name=csrfmiddlewaretoken]").value;
+        formData.append("csrfmiddlewaretoken", csrf);
 
-        const res = await fetch(`/staff/issue/${issueId}/fix/`, {
-            method: "POST",
-            body: fd
-        });
+        try {
+            const res = await fetch(`/staff/issue/${issueId}/fix/`, {
+                method: "POST",
+                body: formData
+            });
 
-        const data = await res.json();
+            const data = await res.json();
 
-        if (data.success){
-            alert("Đã gửi ảnh khắc phục");
-            location.reload();
-        } else {
-            alert("Upload lỗi");
+            if (data.success) {
+                alert("Upload thành công");
+                location.reload();
+            } else {
+                alert(data.message || "Upload lỗi");
+            }
+
+        } catch (err) {
+            console.log(err);
+            alert("Server lỗi");
         }
     });
 });
