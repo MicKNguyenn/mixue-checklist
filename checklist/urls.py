@@ -92,11 +92,6 @@ urlpatterns = [
     name="staff_dashboard"
     ),
     
-    path(
-    "audit/<int:audit_id>/review/<int:issue_id>/",
-    views.review_issue,
-    name="review_issue"
-    ),
     
     path(
     "audit/<int:audit_id>/review/<int:issue_id>/",

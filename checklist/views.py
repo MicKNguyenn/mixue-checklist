@@ -1134,9 +1134,9 @@ def staff_dashboard_by_audit(request, audit_id):
     if not store_id:
         return redirect("/")
 
-    store = Store.objects.filter(id=store_id).first()
-
-    if not store:
+    try:
+        store = Store.objects.get(id=store_id)
+    except Store.DoesNotExist:
         return redirect("/")
 
     audit = Audit.objects.filter(
@@ -1145,7 +1145,7 @@ def staff_dashboard_by_audit(request, audit_id):
     ).first()
 
     if not audit:
-        return redirect("/store/%s/audits/" % store.id)
+        return redirect(f"/store/{store.id}/audits/")
 
     return render(
         request,
