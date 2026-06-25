@@ -86,26 +86,29 @@ body{
 
 <div class="phone">
 
-<!-- HEADER -->
-<div class="card p-3 mb-3">
+<div class="card mb-3 p-3">
 
-<div class="header-title">📋 Kết quả Audit</div>
+<h5 class="fw-bold text-primary mb-3">
+📋 Điểm QC
+</h5>
 
-<hr>
+<div class="row text-center">
 
-<div class="mb-2">
-<div class="small-text">Cửa hàng</div>
-<div class="fw-bold">{{ audit.store.code }}</div>
-</div>
+    <div class="col-4">
+        <div class="text-secondary small">Cửa hàng</div>
+        <div class="header-value">{{ audit.store.code }}</div>
+    </div>
 
-<div class="mb-2">
-<div class="small-text">Điểm QC</div>
-<span class="badge bg-primary badge-score">{{ audit.score }}</span>
-</div>
+    <div class="col-4">
+        <div class="text-secondary small">Điểm</div>
+        <div class="text-primary fw-bold fs-5">{{ audit.score }}</div>
+    </div>
 
-<div>
-<div class="small-text">Ngày</div>
-<div class="fw-bold">{{ audit.created_at }}</div>
+    <div class="col-4">
+        <div class="text-secondary small">Ngày</div>
+        <div class="header-value">{{ audit.created_at|date:"d/m/Y" }}</div>
+    </div>
+
 </div>
 
 </div>
