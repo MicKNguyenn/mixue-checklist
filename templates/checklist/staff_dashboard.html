@@ -147,6 +147,7 @@ Lỗi #{{ forloop.counter }}
 <input type="file"
 name="fix_image"
 accept="image/*"
+multiple
 class="form-control mb-2"
 required>
 
@@ -194,37 +195,71 @@ document.querySelectorAll(".fix-form").forEach(form => {
         e.preventDefault();
 
         const issueId = this.dataset.id;
-        const file = this.querySelector("input[type=file]").files[0];
 
-        if(!file){
+        const files =
+            this.querySelector(
+                'input[type="file"]'
+            ).files;
+
+        if(files.length === 0){
+
             alert("Chọn ảnh trước");
+
             return;
         }
 
         const formData = new FormData();
-        formData.append("fix_image", file);
-        formData.append("csrfmiddlewaretoken",
-            this.querySelector("[name=csrfmiddlewaretoken]").value
+
+        for(let file of files){
+
+            formData.append(
+                "fix_image",
+                file
+            );
+
+        }
+
+        formData.append(
+            "csrfmiddlewaretoken",
+            this.querySelector(
+                "[name=csrfmiddlewaretoken]"
+            ).value
         );
 
         try{
 
-            const res = await fetch(`/staff/issue/${issueId}/fix/`, {
-                method: "POST",
-                body: formData
-            });
+            const res = await fetch(
+                `/staff/issue/${issueId}/fix/`,
+                {
+                    method:"POST",
+                    body:formData
+                }
+            );
 
             const data = await res.json();
 
             if(data.success){
-                alert("Đã gửi ảnh");
+
+                alert(
+                    "Đã gửi ảnh khắc phục"
+                );
+
                 location.reload();
+
             }else{
-                alert("Lỗi upload");
+
+                alert(
+                    data.message || "Lỗi upload"
+                );
+
             }
 
-        }catch{
+        }catch(err){
+
+            console.log(err);
+
             alert("Lỗi kết nối");
+
         }
 
     });

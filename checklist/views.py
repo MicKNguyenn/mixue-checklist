@@ -887,9 +887,7 @@ def login_view(request):
     
 def audit_create(request):
 
-    # lấy danh sách store cho form
     stores = Store.objects.all()
-
 
     if request.method == "POST":
 
@@ -901,29 +899,44 @@ def audit_create(request):
             score=200
         )
 
-        for category in AuditCategory.objects.filter(is_active=True):
+        for category in AuditCategory.objects.filter(
+            is_active=True
+        ):
 
-            for item in category.items.filter(is_active=True):
+            for item in category.items.filter(
+                is_active=True
+            ):
 
-                status = request.POST.get(f"status_{item.id}", "pass")
+                status = request.POST.get(
+                    f"status_{item.id}",
+                    "pass"
+                )
 
-                note = request.POST.get(f"note_{item.id}", "")
-                
+                note = request.POST.get(
+                    f"note_{item.id}",
+                    ""
+                )
+
                 issue = AuditIssue.objects.create(
                     audit=audit,
                     item=item,
                     category=item.category,
                     status=status,
-                    note=note,  
+                    note=note,
                     deduct_score=item.score if status == "fail" else 0
                 )
 
                 if status == "fail":
 
-                    file = request.FILES.get(f"image_{item.id}")
+                    files = request.FILES.getlist(
+                        f"image_{item.id}"
+                    )
 
-                    if file:
-                        upload = cloudinary.uploader.upload(file)
+                    for file in files:
+
+                        upload = cloudinary.uploader.upload(
+                            file
+                        )
 
                         AuditIssueImage.objects.create(
                             issue=issue,
@@ -932,14 +945,22 @@ def audit_create(request):
 
         update_audit_score(audit)
 
-        return redirect(f"/audit/{audit.id}/")
+        return redirect(
+            f"/audit/{audit.id}/"
+        )
 
-    categories = AuditCategory.objects.prefetch_related("items").all()
+    categories = AuditCategory.objects.prefetch_related(
+        "items"
+    ).all()
 
-    return render(request, "checklist/audit_create.html", {
-        "categories": categories,
-        "stores": stores
-    })
+    return render(
+        request,
+        "checklist/audit_create.html",
+        {
+            "categories": categories,
+            "stores": stores
+        }
+    )
     
 def audit_detail(request, id):
 
@@ -1039,41 +1060,52 @@ def staff_dashboard(request):
     
 def staff_fix_issue(request,id):
 
-    store=Store.objects.get(
-        id=request.session["store_id"]
-    )
-
-    issue=get_object_or_404(
-        AuditIssue,
-        id=id,
-        audit__store=store
-    )
-
-    fix_file=request.FILES.get(
-        "fix_image"
-    )
-
-    if not fix_file:
+    if "store_id" not in request.session:
 
         return JsonResponse({
             "success":False
         })
 
-    upload=cloudinary.uploader.upload(
-        fix_file
+    store = Store.objects.get(
+        id=request.session["store_id"]
     )
 
-    AuditFixImage.objects.create(
-        issue=issue,
-        image=upload["secure_url"]
+    issue = get_object_or_404(
+        AuditIssue,
+        id=id,
+        audit__store=store
     )
 
-    issue.status="fixed"
-    issue.save()
+    try:
 
-    return JsonResponse({
-        "success":True
-    })
+        files = request.FILES.getlist(
+            "fix_image"
+        )
+
+        for file in files:
+
+            upload = cloudinary.uploader.upload(
+                file
+            )
+
+            AuditFixImage.objects.create(
+                issue=issue,
+                image=upload["secure_url"]
+            )
+
+        issue.status = "fixed"
+        issue.save()
+
+        return JsonResponse({
+            "success":True
+        })
+
+    except Exception as e:
+
+        return JsonResponse({
+            "success":False,
+            "message":str(e)
+        })
         
 def update_audit_score(audit):
 
@@ -1141,20 +1173,22 @@ def review_issue(request,audit_id,issue_id):
 
 def audit_review_issue(request, audit_id, issue_id):
 
-    if request.method != "POST":
-        return JsonResponse({"success": False})
+    issue = get_object_or_404(
+        AuditIssue,
+        id=issue_id,
+        audit_id=audit_id
+    )
 
-    issue = AuditIssue.objects.get(id=issue_id, audit_id=audit_id)
+    if request.method == "POST":
 
-    status = request.POST.get("status")
-    note = request.POST.get("note")
+        status = request.POST.get("status")
 
-    issue.status = status
-    issue.note = note
-    issue.reviewed_at = timezone.now()
-    issue.save()
+        issue.status = status
+        issue.save()
 
-    return JsonResponse({"success": True})
+    return redirect(
+        f"/audit/{audit_id}/"
+    )
 
 def kpi_dashboard(request):
 
