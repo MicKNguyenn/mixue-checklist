@@ -50,56 +50,56 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 import requests
 from io import BytesIO
-
+import traceback
 
 def dashboard(request):
-    
-    delete_old_reports()
-    
-    all_slots = TimeSlot.objects.all()
-    
-    if "store_id" not in request.session:
-        return redirect("/")
+    try:
+        delete_old_reports()
 
-    store = Store.objects.get(
-        id=request.session["store_id"]
-    )
+        all_slots = TimeSlot.objects.all()
 
-    current_slot = get_current_slot()
+        if "store_id" not in request.session:
+            return redirect("/")
 
-    items = ChecklistItem.objects.filter(
-        slot=current_slot
-    )
-
-    now = timezone.localtime()
-
-    today = now.date()
-
-    if now.hour < 3:
-
-        today = today - timedelta(
-            days=1
+        store = Store.objects.get(
+            id=request.session["store_id"]
         )
 
-    completed_ids = Report.objects.filter(
-        store=store,
-        report_date=today
-    ).values_list(
-        "item_id",
-        flat=True
-    )
+        current_slot = get_current_slot()
 
-    return render(
-        request,
-        "checklist/dashboard.html",
-        {
-            "store": store,
-            "items": items,
-            "slot": current_slot,
-            "all_slots": all_slots,
-            "completed_ids": list(completed_ids)
-        }
-    )
+        items = ChecklistItem.objects.filter(
+            slot=current_slot
+        )
+
+        now = timezone.localtime()
+        today = now.date()
+
+        if now.hour < 3:
+            today = today - timedelta(days=1)
+
+        completed_ids = Report.objects.filter(
+            store=store,
+            report_date=today
+        ).values_list(
+            "item_id",
+            flat=True
+        )
+
+        return render(
+            request,
+            "checklist/dashboard.html",
+            {
+                "store": store,
+                "items": items,
+                "slot": current_slot,
+                "all_slots": all_slots,
+                "completed_ids": list(completed_ids)
+            }
+        )
+
+    except Exception:
+        print(traceback.format_exc())
+        raise
 
 def get_current_slot():
 
