@@ -2020,102 +2020,146 @@ def export_kpi_auditqc_excel(request):
     wb.save(response)
     return response
 
-def export_audit_pdf(request, audit_id):
+def export_audit_excel(request, audit_id):
 
-    import os
-
-    from django.http import HttpResponse
-    from django.conf import settings
-
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib import colors
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-
-    # ================= DATA =================
     audit = Audit.objects.get(id=audit_id)
     issues = audit.issues.select_related("item", "category").all()
 
-    response = HttpResponse(content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="audit_{audit_id}.pdf"'
-
-    doc = SimpleDocTemplate(response)
-    elements = []
-
-    # ================= FONT =================
-    font_path = os.path.join(settings.BASE_DIR, "static/fonts/Roboto-Regular.ttf")
-    pdfmetrics.registerFont(TTFont("Roboto", font_path))
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Audit Report"
 
     # ================= STYLE =================
-    styles = getSampleStyleSheet()
+    header_fill = PatternFill("solid", fgColor="1F4E79")
+    header_font = Font(color="FFFFFF", bold=True)
 
-    styles.add(ParagraphStyle(
-        name="VN_Title",
-        parent=styles["Title"],
-        fontName="Roboto",
-        fontSize=16,
-    ))
+    green = PatternFill("solid", fgColor="C6EFCE")
+    red = PatternFill("solid", fgColor="FFC7CE")
+    yellow = PatternFill("solid", fgColor="FFEB9C")
+    gray = PatternFill("solid", fgColor="E7E6E6")
 
-    # ================= TITLE =================
-    elements.append(
-        Paragraph(f"BÁO CÁO AUDIT - CH {audit.store.code}", styles["VN_Title"])
-    )
-    elements.append(Spacer(1, 12))
+    center = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    left = Alignment(horizontal="left", vertical="center", wrap_text=True)
 
-    # ================= TABLE DATA (NO IMAGE COLUMN) =================
-    data = [["Các mục", "Lỗi", "Trạng thái"]]
+    thin = Side(style="thin", color="000000")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
 
+    # ================= HEADER =================
+    ws["A1"] = "BÁO CÁO AUDIT QC"
+    ws["A1"].font = Font(size=16, bold=True)
+
+    ws["A3"] = "Mã cửa hàng:"
+    ws["B3"] = audit.store.code
+
+    ws["A4"] = "Ngày chấm:"
+    ws["B4"] = audit.created_at.strftime("%d/%m/%Y %H:%M")
+
+    ws["A5"] = "Người quản lý:"
+    ws["B5"] = ""
+
+    ws["A6"] = "TỔNG ĐIỂM (QC):"
+
+    # ================= TABLE HEADER =================
+    start_row = 8
+    headers = ["Danh mục", "Hạng mục", "Trạng thái", "Điểm trừ"]
+
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=start_row, column=col, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = center
+        cell.border = border
+
+    # ================= DATA =================
+    row = start_row + 1
     seen_category = None
+    category_start = {}
+
+    BASE_SCORE = 200
+    total_deduct = 0
 
     for issue in issues:
 
         category = issue.category.title if issue.category else "-"
         item = issue.item.title if issue.item else "-"
 
-        # status
+        score = getattr(issue, "deduct_score", 0)
+        total_deduct += score
+
         if issue.status == "pass":
-            status_text = "Đạt"
+            status = "ĐẠT"
+            status_fill = green
         elif issue.status == "fail":
-            status_text = "Không đạt"
+            status = "KHÔNG ĐẠT"
+            status_fill = red
         else:
-            status_text = "Chờ QC"
+            status = "CHỜ QC"
+            status_fill = gray
 
-        # merge category giả
-        if category == seen_category:
-            category_display = ""
-        else:
-            category_display = category
+        # ===== MERGE CATEGORY =====
+        if category != seen_category:
+            category_start[category] = row
+            category_value = category
             seen_category = category
+        else:
+            category_value = None
 
-        data.append([
-            category_display,
-            item,
-            status_text
-        ])
+        ws.cell(row=row, column=1, value=category_value)
+        ws.cell(row=row, column=2, value=item)
 
-    # ================= TABLE =================
-    table = Table(data, colWidths=[160, 250, 120])
+        c_status = ws.cell(row=row, column=3, value=status)
+        c_score = ws.cell(row=row, column=4, value=score)
 
-    table.setStyle(TableStyle([
+        for col in range(1, 5):
+            cell = ws.cell(row=row, column=col)
+            cell.border = border
+            cell.alignment = center if col in [3, 4] else left
 
-        # HEADER
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1F4E79")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        c_status.fill = status_fill
 
-        # FONT
-        ("FONTNAME", (0, 0), (-1, -1), "Roboto"),
+        row += 1
 
-        ("ALIGN", (0, 0), (-1, 0), "CENTER"),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    # ================= MERGE CATEGORY =================
+    for cat, start in category_start.items():
+        end = start + sum(
+            1 for i in issues
+            if (i.category.title if i.category else "-") == cat
+        ) - 1
 
-        # STATUS CENTER
-        ("ALIGN", (2, 1), (2, -1), "CENTER"),
-    ]))
+        if start != end:
+            ws.merge_cells(start_row=start, start_column=1,
+                           end_row=end, end_column=1)
 
-    elements.append(table)
+            ws.cell(row=start, column=1).alignment = center
 
-    doc.build(elements)
+    # ================= FINAL SCORE =================
+    final_score = BASE_SCORE - total_deduct
 
+    ws["B6"] = final_score
+
+    if final_score < 150:
+        fill = red
+    elif final_score < 165:
+        fill = yellow
+    else:
+        fill = green
+
+    ws["B6"].fill = fill
+    ws["B6"].font = Font(bold=True, size=14)
+    ws["B6"].alignment = center
+
+    # ================= WIDTH =================
+    ws.column_dimensions["A"].width = 22
+    ws.column_dimensions["B"].width = 45
+    ws.column_dimensions["C"].width = 18
+    ws.column_dimensions["D"].width = 12
+
+    # ================= RESPONSE =================
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    today = datetime.now().strftime("%d_%m")
+
+    response["Content-Disposition"] = f'attachment; filename="MX_{audit.store.code}_{today}.xlsx"'
+    wb.save(response)
     return response

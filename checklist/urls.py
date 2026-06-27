@@ -138,9 +138,10 @@ urlpatterns = [
         name="export_kpi_auditqc_excel"
     ),
     
-    path("audit/<int:audit_id>/pdf/", 
-        views.export_audit_pdf,
-        name="export_audit_pdf"
+    path(
+        "export-audit/<int:audit_id>/",
+        views.export_audit_excel,
+        name="export_audit_excel"
     ),
 ]
     

@@ -112,7 +112,7 @@ body{
 
     <div class="col-4">
         <div class="text-secondary small">Ngày</div>
-        <div class="header-value">{{ audit.created_at|date:"d/m/Y" }}</div>
+        <div class="header-value">{{ audit.created_at|date:"d/m/Y H:i"  }}</div>
     </div>
 
 </div>
@@ -122,10 +122,10 @@ body{
 
 <!-- ISSUES -->
 <div class="mb-2 fw-bold">❌ Lỗi phát hiện</div> 
-<a href="{% url 'export_audit_pdf' audit.id %}" 
+<a href="{% url 'export_audit_excel' audit.id %}" 
     class="btn btn-outline-danger mb-3 w-100">
 
-    📄 Xuất PDF báo cáo QC
+    📄 Xuất File báo cáo QC
 </a> 
     
 
@@ -267,9 +267,16 @@ body{
 ➕ Tạo Audit mới
 </a>
 
-<a href="{% url 'admin_dashboard' %}" class="btn btn-secondary w-100">
-⬅ Quay lại Dashboard
-</a>
+<div class="mt-3">
+    <button
+        type="button"
+        class="btn btn-outline-secondary w-100"
+        onclick="history.back()">
+
+        ⬅ Quay lại
+
+    </button>
+</div>
 
 </div>
 
