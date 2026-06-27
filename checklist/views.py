@@ -1922,7 +1922,8 @@ def export_kpi_auditqc_excel(request):
 
     # ================= SHEET 2 =================
     ws2 = wb.create_sheet("Lỗi phổ biến")
-    ws2.append(["Lỗi", "Số lần"])
+
+    ws2.append(["Rank", "Lỗi", "Số lần"])
 
     for cell in ws2[1]:
         cell.fill = header_fill
@@ -1930,9 +1931,56 @@ def export_kpi_auditqc_excel(request):
         cell.border = thin_border
         cell.alignment = center
 
+
+    # CHỈ LẤY FAIL THỰC SỰ
+    issue_count = (
+        AuditIssue.objects
+        .filter(
+            audit__in=audits,
+            status="fail"
+        )
+        .values("item__title")
+        .annotate(total=Count("id"))
+        .filter(total__gte=3)
+        .order_by("-total")
+    )
+
+    rank = 1
+
     for i in issue_count:
-        ws2.append([i["item__title"], i["total"]])
-        style_row(ws2, ws2[ws2.max_row])
+
+        ws2.append([
+            rank,
+            i["item__title"],
+            i["total"]
+        ])
+
+        row = ws2[ws2.max_row]
+        total = i["total"]
+
+        # style cơ bản
+        for c in row:
+            c.border = thin_border
+            c.alignment = center
+
+        # 🎨 màu theo mức độ
+        if total >= 10:
+            fill = PatternFill("solid", fgColor="FF4D4D")  # đỏ
+            font = Font(color="FFFFFF", bold=True)
+
+        elif total >= 5:
+            fill = PatternFill("solid", fgColor="FFC000")  # vàng
+            font = Font(color="000000", bold=True)
+
+        else:
+            fill = PatternFill("solid", fgColor="92D050")  # xanh
+            font = Font(color="000000", bold=True)
+
+        for c in row:
+            c.fill = fill
+            c.font = font
+
+        rank += 1
 
     # ================= SHEET 3 =================
     ws3 = wb.create_sheet("Lỗi lặp lại")
