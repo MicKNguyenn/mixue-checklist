@@ -54,7 +54,7 @@ import traceback
 
 def dashboard(request):
     try:
-        
+        #delete_old_reports()
 
         all_slots = TimeSlot.objects.all()
 
