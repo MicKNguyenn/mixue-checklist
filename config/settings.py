@@ -15,12 +15,12 @@ SECRET_KEY = 'django-insecure-p!knsj8esvrs67vmbts6*c(eva147mu-5!my!_=g^m(itq$q$)
 DEBUG = os.environ.get('DEBUG', 'False') == 'True' if os.environ.get('CLOUDINARY_CLOUD_NAME') else True
 
 ALLOWED_HOSTS = [
+    "mixue-checklist-1.onrender.com",
     "mixue-checklist-2.onrender.com",
     "127.0.0.1",
     "localhost",
     "192.168.1.52",
 ]
-
 
 # =====================
 # INSTALLED APPS
