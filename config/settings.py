@@ -22,23 +22,6 @@ ALLOWED_HOSTS = [
     "192.168.1.52",
 ]
 
-import os
-import django
-
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
-django.setup()
-
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
-
-if not User.objects.filter(username=os.environ.get("DJANGO_SUPERUSER_USERNAME")).exists():
-    User.objects.create_superuser(
-        username=os.environ.get("mixuemb"),
-        email=os.environ.get("pthue051024@gmail.com"),
-        password=os.environ.get("MixueChecklist2026@"),
-    )
-
 
 # =====================
 # INSTALLED APPS
