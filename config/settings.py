@@ -16,6 +16,7 @@ DEBUG = os.environ.get('DEBUG', 'False') == 'True' if os.environ.get('CLOUDINARY
 
 ALLOWED_HOSTS = [
     "mixue-checklist-1.onrender.com",
+    "mixue-checklist-2.onrender.com",
     "127.0.0.1",
     "localhost",
     "192.168.1.52",
