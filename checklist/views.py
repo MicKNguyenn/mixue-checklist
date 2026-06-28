@@ -1498,7 +1498,7 @@ def export_kpi_excel(request):
 
     ws4.append([
         "Ngày",
-        "% đạt toàn hệ thống",
+        "% đạt trong ngày",
         "CH tệ nhất",
         "Tổng Lỗi/Chưa báo cáo"
     ])
@@ -1510,6 +1510,8 @@ def export_kpi_excel(request):
         .order_by("report_date")
     )
 
+    TOTAL_CHECKLIST = ChecklistItem.objects.count()
+
     for d in days:
 
         date_value = d["report_date"]
@@ -1518,13 +1520,15 @@ def export_kpi_excel(request):
             report_date=date_value
         )
 
+        # ==========================
+        # % đạt của toàn hệ thống trong ngày
+        # ==========================
+
         total_day = day_reports.count()
 
         pass_day = day_reports.filter(
             status="pass"
         ).count()
-
-        percent_day = 0
 
         if total_day > 0:
 
@@ -1533,46 +1537,77 @@ def export_kpi_excel(request):
                 1
             )
 
-        # CH tốt nhất
+        else:
 
-        worst_store  = ""
+            percent_day = 0
 
-        ranking = []
+        # ==========================
+        # Cửa hàng tệ nhất trong ngày
+        # ==========================
+
+        worst_store = ""
+
+        lowest_percent = 101
 
         for store in Store.objects.all():
 
-            rs = day_reports.filter(store=store)
-
-            total_store = rs.count()
-
-            if total_store == 0:
-                continue
-
-            pass_store = rs.filter(status="pass").count()
-
-            percent = pass_store * 100 / total_store
-
-            ranking.append(
-                (percent, store.code)
+            rs = day_reports.filter(
+                store=store
             )
 
-        if ranking:
+            pass_store = rs.filter(
+                status="pass"
+            ).count()
 
-            worst_store = min(ranking)[1]
+            # checklist chưa upload cũng tính là không đạt
+            percent_store = round(
+                pass_store * 100 / TOTAL_CHECKLIST,
+                1
+            )
 
-        # lỗi nhiều nhất
+            if percent_store < lowest_percent:
 
-        total_issue = day_reports.filter(
-            status__in=["fail", "pending"]
-        ).count()
+                lowest_percent = percent_store
 
-        error_name = f"{total_issue} lỗi"
+                worst_store = store.code
+
+        # ==========================
+        # Tổng lỗi + Pending + Chưa báo cáo
+        # ==========================
+
+        total_issue = 0
+
+        for store in Store.objects.all():
+
+            rs = day_reports.filter(
+                store=store
+            )
+
+            fail = rs.filter(
+                status="fail"
+            ).count()
+
+            pending = rs.filter(
+                status="pending"
+            ).count()
+
+            # chưa báo cáo
+            not_report = max(
+                TOTAL_CHECKLIST - rs.count(),
+                0
+            )
+
+            total_issue += (
+                fail
+                + pending
+                + not_report
+            )
 
         ws4.append([
             date_value,
             percent_day,
             worst_store,
-            error_name
+            f"{total_issue} lỗi"
         ])
 
     format_sheet(ws4)
