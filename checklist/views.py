@@ -1498,8 +1498,8 @@ def export_kpi_excel(request):
 
     ws4.append([
         "Ngày",
-        "% đạt hàng ngày",
-        "CH tốt nhất",
+        "% đạt toàn hệ thống",
+        "CH tệ nhất",
         "Checklist lỗi nhiều nhất"
     ])
 
@@ -1535,35 +1535,30 @@ def export_kpi_excel(request):
 
         # CH tốt nhất
 
-        best_store = ""
+        worst_store  = ""
 
         ranking = []
 
         for store in Store.objects.all():
 
-            rs = day_reports.filter(
-                store=store
-            )
+            rs = day_reports.filter(store=store)
 
             total_store = rs.count()
 
-            pass_store = rs.filter(
-                status="pass"
-            ).count()
+            if total_store == 0:
+                continue
 
-            p = 0
+            pass_store = rs.filter(status="pass").count()
 
-            if total_store > 0:
-
-                p = pass_store * 100 / total_store
+            percent = pass_store * 100 / total_store
 
             ranking.append(
-                (p, store.code)
+                (percent, store.code)
             )
 
         if ranking:
 
-            best_store = max(ranking)[1]
+            worst_store = min(ranking)[1]
 
         # lỗi nhiều nhất
 
@@ -1579,13 +1574,12 @@ def export_kpi_excel(request):
         error_name = ""
 
         if top_error:
-
-            error_name = top_error["item__title"]
+            error_name = f'{top_error["total"]} lỗi'
 
         ws4.append([
             date_value,
             percent_day,
-            best_store,
+            worst_store,
             error_name
         ])
 
@@ -1620,41 +1614,51 @@ def export_kpi_excel(request):
         top=Side(style="thin"),
         bottom=Side(style="thin")
     )
-    
+        
     ws5.append([
         "Hạng",
         "Cửa hàng",
         "% đạt",
-        "Tổng checklist"
+        "Đã báo cáo",
+        "Phải báo cáo"
     ])
 
     ranking=[]
+    
+    days_count = reports.values(
+        "report_date"
+    ).distinct().count()
 
+    total_checklist = ChecklistItem.objects.count()
+    
     for store in Store.objects.all():
 
         rs=reports.filter(
             store=store
         )
 
-        total_store=rs.count()
+        reported = rs.count()
 
-        pass_store=rs.filter(
+        pass_store = rs.filter(
             status="pass"
         ).count()
 
-        percent_store=0
+        total_expected = total_checklist * days_count
 
-        if total_store>0:
+        percent_store = 0
 
-            percent_store=round(
-                pass_store * 100 / total_store,
+        if total_expected > 0:
+
+            percent_store = round(
+                pass_store * 100 / total_expected,
                 1
             )
 
         ranking.append({
-            "code":store.code,
-            "percent":percent_store,
-            "total":total_store
+            "code": store.code,
+            "percent": percent_store,
+            "reported": reported,
+            "expected": total_expected
         })
     
     ranking.sort(
@@ -1670,7 +1674,8 @@ def export_kpi_excel(request):
             rank,
             row["code"],
             row["percent"],
-            row["total"]
+            row["reported"],
+            row["expected"]
         ])
 
         current_row = ws5.max_row
