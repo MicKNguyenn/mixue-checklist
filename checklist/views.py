@@ -1500,7 +1500,7 @@ def export_kpi_excel(request):
         "Ngày",
         "% đạt toàn hệ thống",
         "CH tệ nhất",
-        "Checklist lỗi nhiều nhất"
+        "Tổng Lỗi/Chưa báo cáo"
     ])
 
     days = (
@@ -1562,19 +1562,11 @@ def export_kpi_excel(request):
 
         # lỗi nhiều nhất
 
-        top_error = (
-            day_reports
-            .filter(status="fail")
-            .values("item__title")
-            .annotate(total=Count("id"))
-            .order_by("-total")
-            .first()
-        )
+        total_issue = day_reports.filter(
+            status__in=["fail", "pending"]
+        ).count()
 
-        error_name = ""
-
-        if top_error:
-            error_name = f'{top_error["total"]} lỗi'
+        error_name = f"{total_issue} lỗi"
 
         ws4.append([
             date_value,
@@ -1593,7 +1585,7 @@ def export_kpi_excel(request):
     response[
         "Content-Disposition"
     ]=(
-        'attachment; filename="KPI_Report.xlsx"'
+        'attachment; filename="KetquaChecklist.xlsx"'
     )
     
     ws5 = wb.create_sheet("Leaderboard")
