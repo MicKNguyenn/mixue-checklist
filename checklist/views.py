@@ -1340,7 +1340,28 @@ def export_kpi_excel(request):
     start_date=request.GET.get("start_date")
     end_date=request.GET.get("end_date")
 
+    selected_stores = request.GET.getlist("stores")
     reports=Report.objects.all()
+    
+    if start_date:
+        reports = reports.filter(
+            report_date__gte=start_date
+        )
+
+    if end_date:
+        reports = reports.filter(
+            report_date__lte=end_date
+        )
+
+    stores = Store.objects.all()
+
+    if selected_stores:
+        stores = stores.filter(
+            id__in=selected_stores
+        )
+        reports = reports.filter(
+            store_id__in=selected_stores
+        )
 
     display_start = "Tất cả"
     display_end = "Tất cả"
@@ -1402,7 +1423,7 @@ def export_kpi_excel(request):
         "report_date"
     ).distinct().count()
 
-    for store in Store.objects.all():
+    for store in stores:
 
         rs = reports.filter(
             store=store
@@ -1516,7 +1537,7 @@ def export_kpi_excel(request):
         .order_by("report_date")
     )
 
-    stores = list(Store.objects.all())
+    stores = list(stores)
 
     TOTAL_CHECKLIST = ChecklistItem.objects.count()
 
@@ -1527,10 +1548,16 @@ def export_kpi_excel(request):
         # ==========================
         # % đạt toàn hệ thống trong ngày
         # ==========================
-        total_day = day_reports.count()
-        pass_day = day_reports.filter(status="pass").count()
+        pass_day = day_reports.filter(
+            status="pass"
+        ).count()
 
-        percent_day = round((pass_day * 100 / total_day), 1) if total_day else 0
+        expected = TOTAL_CHECKLIST * len(stores)
+
+        percent_day = round(
+            pass_day * 100 / expected,
+            1
+        ) if expected else 0
 
         # ==========================
         # Store tệ nhất
@@ -1624,7 +1651,7 @@ def export_kpi_excel(request):
 
     total_checklist = ChecklistItem.objects.count()
     
-    for store in Store.objects.all():
+    for store in stores:
 
         rs=reports.filter(
             store=store
