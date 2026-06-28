@@ -1392,9 +1392,9 @@ def export_kpi_excel(request):
 
     ws2.append([
         "Cửa hàng",
-        "Tổng lỗi",
+        "Tổng lỗi/Chưa báo cáo",
         "Checklist đạt TB/ngày",
-        "% đạt"
+        "Tỷ lệ đat"
     ])
 
     # số ngày trong khoảng admin chọn
@@ -1417,7 +1417,7 @@ def export_kpi_excel(request):
 
         # số lỗi
         fail_store = rs.filter(
-            status="fail"
+            status__in=["fail", "pending"]
         ).count()
 
         # checklist đạt trung bình mỗi ngày
@@ -1505,7 +1505,7 @@ def export_kpi_excel(request):
         "Ngày",
         "% đạt trong ngày",
         "CH tệ nhất",
-        "Tổng Lỗi/Chưa báo cáo"
+        "Tổng Lỗi/Chưa báo cáo trong ngày"
     ])
 
     # lấy danh sách ngày
