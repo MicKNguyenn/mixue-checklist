@@ -2130,7 +2130,7 @@ def export_audit_excel(request, audit_id):
 
     ws["A6"] = "TỔNG ĐIỂM (QC):"
 
-    headers = ["Danh mục", "Hạng mục", "Trạng thái", "Điểm trừ"]
+    headers = ["Danh mục", "Hạng mục", "Trạng thái", "Điểm trừ", "Nội dung"]
     start_row = 8
 
     for col, h in enumerate(headers, 1):
@@ -2170,13 +2170,18 @@ def export_audit_excel(request, audit_id):
 
             c3 = ws.cell(row, 3, status)
             c4 = ws.cell(row, 4, score)
+            c5 = ws.cell(row, 5, issue.note or "")
 
             c3.fill = fill
 
-            for col in range(1, 5):
+            for col in range(1, 6):
                 cell = ws.cell(row, col)
                 cell.border = border
-                cell.alignment = center if col in [3, 4] else left
+
+                if col in [3, 4]:
+                    cell.alignment = center
+                else:
+                    cell.alignment = left
 
             row += 1
 
@@ -2213,6 +2218,7 @@ def export_audit_excel(request, audit_id):
     ws.column_dimensions["B"].width = 45
     ws.column_dimensions["C"].width = 18
     ws.column_dimensions["D"].width = 12
+    ws.column_dimensions["E"].width = 45
 
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
