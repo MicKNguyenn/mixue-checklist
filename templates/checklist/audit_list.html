@@ -107,48 +107,55 @@ body{
 
 <div class="card audit-card p-3">
 
-    <div class="d-flex justify-content-between align-items-center">
+    <div class="d-flex justify-content-between align-items-start">
 
-        <div class="store-name">
-            🏪 {{ audit.store.code }}
-        </div>
-
-        <!-- STATUS -->
         <div>
+            <div class="store-name">
+                🏪 {{ audit.store.code }}
+            </div>
 
-            {% if audit.issues.all|length == 0 %}
+            <div class="mt-2">
 
-                <span class="badge bg-secondary badge-pill">
-                    Chưa có dữ liệu
-                </span>
+                {% if audit.issues.all|length == 0 %}
 
-            {% elif audit.need_review %}
+                    <span class="badge bg-secondary badge-pill">
+                        Chưa có dữ liệu
+                    </span>
 
-                <span class="badge bg-danger badge-pill">
-                    Cần duyệt
-                </span>
+                {% elif audit.need_review %}
 
-            {% elif audit.is_pending %}
+                    <span class="badge bg-danger badge-pill">
+                        Cần duyệt
+                    </span>
 
-                <span class="badge bg-warning text-dark badge-pill">
-                    Chưa đánh giá
-                </span>
+                {% elif audit.is_pending %}
 
-            {% elif audit.has_fail %}
+                    <span class="badge bg-warning text-dark badge-pill">
+                        Chưa đánh giá
+                    </span>
 
-                <span class="badge bg-danger badge-pill">
-                    Có lỗi
-                </span>
+                {% elif audit.has_fail %}
 
-            {% else %}
+                    <span class="badge bg-danger badge-pill">
+                        Có lỗi
+                    </span>
 
-                <span class="badge bg-success badge-pill">
-                    Hoàn tất
-                </span>
+                {% else %}
 
-            {% endif %}
+                    <span class="badge bg-success badge-pill">
+                        Hoàn tất
+                    </span>
 
+                {% endif %}
+
+            </div>
         </div>
+
+        <a href="/audit-delete/{{ audit.id }}/"
+        class="btn btn-outline-danger btn-sm"
+        onclick="event.stopPropagation(); return confirm('Xóa Audit này?');">
+            🗑
+        </a>
 
     </div>
 
