@@ -162,14 +162,20 @@ body{
 
     <div class="text-end mt-2">
 
-        <a href="/audit-delete/{{ audit.id }}/"
-        class="btn btn-outline-danger btn-sm"
+        <form action="/audit-delete/{{ audit.id }}/"
+            method="POST"
+            onsubmit="event.stopPropagation(); return confirm('Xóa Audit này?');">
 
-        onclick="event.stopPropagation(); return confirm('Xóa Audit này?');">
+            {% csrf_token %}
 
-            🗑 Xóa
+            <button type="submit"
+                    class="btn btn-outline-danger btn-sm">
 
-        </a>
+                🗑 Xóa
+
+            </button>
+
+        </form>
 
     </div>
 
