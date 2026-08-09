@@ -188,13 +188,13 @@ img{
 
 <script>
 
-document.getElementById("approveAllBtn").addEventListener("click", async function () {
+document.getElementById("approveAllBtn").addEventListener("click", async function() {
 
     if (!confirm(
         "Duyệt tất cả checklist đã chụp thành ĐẠT?\n\n" +
-        "• Checklist đang chờ duyệt → Đạt\n" +
-        "• Checklist Không đạt → giữ nguyên\n" +
-        "• Checklist chưa chụp → giữ nguyên"
+        "• Pending → Đạt\n" +
+        "• Không đạt → giữ nguyên\n" +
+        "• Chưa báo cáo → giữ nguyên"
     )) {
         return;
     }
@@ -202,53 +202,49 @@ document.getElementById("approveAllBtn").addEventListener("click", async functio
     const btn = this;
 
     btn.disabled = true;
-    btn.innerHTML = "Đang duyệt...";
+    btn.innerHTML = "⏳ Đang duyệt...";
 
     try {
 
         const formData = new FormData();
 
-        formData.append(
-            "action",
-            "approve_all"
-        );
+        formData.append("action", "approve_all");
+
+        const csrfToken = document.querySelector(
+            '[name=csrfmiddlewaretoken]'
+        ).value;
 
         formData.append(
             "csrfmiddlewaretoken",
-            "{{ csrf_token }}"
+            csrfToken
         );
 
-        const res = await fetch(
-            window.location.href,
-            {
-                method: "POST",
-                body: formData,
-                headers: {
-                    "X-Requested-With": "XMLHttpRequest"
-                }
+        const res = await fetch(window.location.href, {
+            method: "POST",
+            body: formData,
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
             }
-        );
+        });
 
         const data = await res.json();
 
         if (data.success) {
 
-            btn.classList.remove("btn-success");
-            btn.classList.add("btn-primary");
-
             btn.innerHTML =
                 `✓ Đã duyệt ${data.updated} checklist`;
 
-            // reload để status trên màn hình cập nhật
+            // CHỈ NÚT DUYỆT TẤT CẢ mới reload
             setTimeout(() => {
-                location.reload();
+                window.location.reload();
             }, 800);
 
         } else {
 
-            alert("Duyệt thất bại!");
             btn.disabled = false;
             btn.innerHTML = "✓ Duyệt tất cả";
+
+            alert(data.message || "Duyệt thất bại!");
 
         }
 
@@ -256,15 +252,17 @@ document.getElementById("approveAllBtn").addEventListener("click", async functio
 
         console.log(err);
 
-        alert("Có lỗi xảy ra!");
-
         btn.disabled = false;
         btn.innerHTML = "✓ Duyệt tất cả";
+
+        alert("Có lỗi xảy ra!");
+
     }
 
 });
 
 </script>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
