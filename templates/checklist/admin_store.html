@@ -188,6 +188,75 @@ img{
 
 <script>
 
+document.querySelectorAll(".review-form").forEach(form => {
+
+    form.addEventListener("submit", async function(e) {
+
+        // QUAN TRỌNG: chặn submit bình thường → không reload
+        e.preventDefault();
+
+        const btn = form.querySelector(".save-btn");
+
+        btn.disabled = true;
+        btn.innerHTML = "Đang lưu...";
+
+        try {
+
+            const formData = new FormData(form);
+
+            const res = await fetch(window.location.href, {
+                method: "POST",
+                body: formData,
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+
+                btn.classList.remove("btn-primary");
+                btn.classList.add("btn-success");
+                btn.innerHTML = "✓ Đã lưu";
+
+                setTimeout(() => {
+
+                    btn.disabled = false;
+                    btn.classList.remove("btn-success");
+                    btn.classList.add("btn-primary");
+                    btn.innerHTML = "Lưu đánh giá";
+
+                }, 1200);
+
+            } else {
+
+                btn.disabled = false;
+                btn.innerHTML = "Lưu đánh giá";
+
+                alert(data.message || "Lưu thất bại!");
+
+            }
+
+        } catch (err) {
+
+            console.log(err);
+
+            btn.disabled = false;
+            btn.innerHTML = "Lưu đánh giá";
+
+            alert("Có lỗi xảy ra!");
+
+        }
+
+    });
+
+});
+
+</script>
+
+<script>
+
 document.getElementById("approveAllBtn").addEventListener("click", async function() {
 
     if (!confirm(
@@ -262,6 +331,223 @@ document.getElementById("approveAllBtn").addEventListener("click", async functio
 });
 
 </script>
+
+
+<script>
+
+document.querySelectorAll(".review-form").forEach(function(form) {
+
+    form.addEventListener("submit", async function(e) {
+
+        // QUAN TRỌNG: chặn form submit bình thường
+        e.preventDefault();
+
+        const btn = form.querySelector(".save-btn");
+
+        btn.disabled = true;
+        btn.innerHTML = "⏳ Đang lưu...";
+
+        try {
+
+            const formData = new FormData(form);
+
+            const response = await fetch(
+                window.location.href,
+                {
+                    method: "POST",
+                    body: formData,
+
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest"
+                    }
+                }
+            );
+
+            const data = await response.json();
+
+            if (data.success) {
+
+                btn.classList.remove("btn-primary");
+                btn.classList.add("btn-success");
+
+                btn.innerHTML = "✓ Đã lưu";
+
+                // KHÔNG reload trang
+                setTimeout(function() {
+
+                    btn.disabled = false;
+
+                    btn.classList.remove("btn-success");
+                    btn.classList.add("btn-primary");
+
+                    btn.innerHTML = "Lưu đánh giá";
+
+                }, 1200);
+
+            } else {
+
+                btn.disabled = false;
+                btn.innerHTML = "Lưu đánh giá";
+
+                alert(
+                    data.message || "Lưu đánh giá thất bại!"
+                );
+
+            }
+
+        } catch (error) {
+
+            console.error(error);
+
+            btn.disabled = false;
+            btn.innerHTML = "Lưu đánh giá";
+
+            alert(
+                "Có lỗi xảy ra khi lưu đánh giá!"
+            );
+
+        }
+
+    });
+
+});
+
+
+/* =====================================================
+   DUYỆT TẤT CẢ
+   pending -> pass
+   fail    -> giữ nguyên
+   pass    -> giữ nguyên
+   chưa chụp -> giữ nguyên
+===================================================== */
+
+const approveBtn = document.getElementById("approveAllBtn");
+
+if (approveBtn) {
+
+    approveBtn.addEventListener("click", async function() {
+
+        if (!confirm(
+            "Duyệt tất cả checklist đã chụp thành ĐẠT?\n\n" +
+            "• Chưa đánh giá → Đạt\n" +
+            "• Không đạt → Giữ nguyên\n" +
+            "• Đã đạt → Giữ nguyên\n" +
+            "• Chưa chụp → Giữ nguyên"
+        )) {
+
+            return;
+
+        }
+
+        approveBtn.disabled = true;
+        approveBtn.innerHTML = "⏳ Đang duyệt...";
+
+        try {
+
+            const formData = new FormData();
+
+            formData.append(
+                "action",
+                "approve_all"
+            );
+
+            // Lấy CSRF từ form bất kỳ trên trang
+            const csrfInput = document.querySelector(
+                '[name="csrfmiddlewaretoken"]'
+            );
+
+            if (csrfInput) {
+
+                formData.append(
+                    "csrfmiddlewaretoken",
+                    csrfInput.value
+                );
+
+            }
+
+            const response = await fetch(
+                window.location.href,
+                {
+                    method: "POST",
+                    body: formData,
+
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest"
+                    }
+                }
+            );
+
+            const data = await response.json();
+
+            if (data.success) {
+
+                approveBtn.classList.remove("btn-success");
+                approveBtn.classList.add("btn-primary");
+
+                approveBtn.innerHTML =
+                    `✓ Đã duyệt ${data.updated} checklist`;
+
+                /*
+                 * Không reload trang.
+                 *
+                 * Cập nhật trực tiếp các select
+                 * pending -> pass trên giao diện.
+                 */
+
+                document.querySelectorAll(
+                    '.review-form select[name="status"]'
+                ).forEach(function(select) {
+
+                    if (select.value === "pending") {
+
+                        select.value = "pass";
+
+                    }
+
+                });
+
+                setTimeout(function() {
+
+                    approveBtn.disabled = false;
+
+                    approveBtn.classList.remove("btn-primary");
+                    approveBtn.classList.add("btn-success");
+
+                    approveBtn.innerHTML = "✓ Duyệt tất cả";
+
+                }, 1500);
+
+            } else {
+
+                approveBtn.disabled = false;
+                approveBtn.innerHTML = "✓ Duyệt tất cả";
+
+                alert(
+                    data.message || "Duyệt thất bại!"
+                );
+
+            }
+
+        } catch (error) {
+
+            console.error(error);
+
+            approveBtn.disabled = false;
+            approveBtn.innerHTML = "✓ Duyệt tất cả";
+
+            alert(
+                "Có lỗi xảy ra khi duyệt!"
+            );
+
+        }
+
+    });
+
+}
+
+</script>
+
+
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
