@@ -50,23 +50,34 @@ img{
 
 <div class="phone">
 
-<div class="topbar">
+<div class="d-flex justify-content-between align-items-center mb-3">
 
     <a
-    href="/admin-day/{{ selected_date|date:'Y-m-d' }}/"
-    class="btn btn-outline-dark mb-3">
+        href="/admin-day/{{ selected_date|date:'Y-m-d' }}/"
+        class="btn btn-outline-dark">
 
-    ← Quay lại
+        ← Quay lại
 
     </a>
 
-    <h3>
-    CH {{ store.code }}
-    </h3>
+    <button
+        type="button"
+        id="approveAllBtn"
+        class="btn btn-success">
 
-    <p>
+        ✓ Duyệt tất cả đạt
+
+    </button>
+
+</div>
+
+<h3>
+    CH {{ store.code }}
+</h3>
+
+<p>
     📅 {{ selected_date|date:"d/m/Y" }}
-    </p>
+</p>
 
 <hr>
 
@@ -241,7 +252,84 @@ function resetButton(btn) {
 }
 
 </script>
+<script>
 
+document.getElementById("approveAllBtn").addEventListener("click", async function () {
+
+    const btn = this;
+
+    const confirmed = confirm(
+        "Bạn có chắc muốn đánh dấu TẤT CẢ checklist đã báo cáo là ĐẠT không?"
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = "⏳ Đang duyệt...";
+
+    try {
+
+        const formData = new FormData();
+
+        formData.append("approve_all", "1");
+
+        const csrfToken = document.querySelector(
+            '[name=csrfmiddlewaretoken]'
+        ).value;
+
+        const res = await fetch(window.location.href, {
+
+            method: "POST",
+
+            body: formData,
+
+            headers: {
+                "X-CSRFToken": csrfToken,
+                "X-Requested-With": "XMLHttpRequest"
+            }
+
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+
+            btn.classList.remove("btn-success");
+            btn.classList.add("btn-primary");
+
+            btn.innerHTML =
+                `✓ Đã duyệt ${data.count} checklist`;
+
+            // reload để toàn bộ trạng thái trên trang cập nhật
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+
+        } else {
+
+            btn.disabled = false;
+            btn.innerHTML = "✓ Duyệt tất cả đạt";
+
+            alert(data.message || "Duyệt thất bại!");
+
+        }
+
+    } catch (err) {
+
+        console.log(err);
+
+        btn.disabled = false;
+        btn.innerHTML = "✓ Duyệt tất cả đạt";
+
+        alert("Có lỗi xảy ra!");
+
+    }
+
+});
+
+</script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 

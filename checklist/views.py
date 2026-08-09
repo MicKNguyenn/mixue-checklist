@@ -315,25 +315,65 @@ def admin_day(request, date):
         }
     )
     
+
 def admin_store(request, store_id, date):
 
     if not request.user.is_staff:
         return redirect("/")
-    selected_date = datetime.strptime(date, "%Y-%m-%d").date()
+
+    selected_date = datetime.strptime(
+        date,
+        "%Y-%m-%d"
+    ).date()
+
+    store = Store.objects.get(id=store_id)
 
     # =========================
-    # AJAX UPDATE (KHÔNG RELOAD)
+    # AJAX UPDATE
     # =========================
-    if request.method == 'POST':
+    if request.method == "POST":
 
+        # =========================
+        # DUYỆT TẤT CẢ CHECKLIST ĐÃ BÁO CÁO
+        # =========================
+        if request.POST.get("approve_all") == "1":
+
+            reports = Report.objects.filter(
+                store=store,
+                report_date=selected_date
+            ).exclude(
+                status="pass"
+            )
+
+            count = reports.count()
+
+            reports.update(
+                status="pass"
+            )
+
+            return JsonResponse({
+                "success": True,
+                "count": count
+            })
+
+        # =========================
+        # UPDATE TỪNG CHECKLIST
+        # =========================
         report_id = request.POST.get("report_id")
         status = request.POST.get("status")
         note = request.POST.get("note")
 
         try:
-            report = Report.objects.get(id=report_id)
+
+            report = Report.objects.get(
+                id=report_id,
+                store=store,
+                report_date=selected_date
+            )
+
             report.status = status
             report.note = note
+
             report.save()
 
             return JsonResponse({
@@ -341,22 +381,27 @@ def admin_store(request, store_id, date):
             })
 
         except Report.DoesNotExist:
+
             return JsonResponse({
                 "success": False,
                 "message": "Report not found"
             }, status=404)
 
     # =========================
-    # LOAD PAGE (GIỮ NGUYÊN)
+    # LOAD PAGE
     # =========================
-    store = Store.objects.get(id=store_id)
-    slots = TimeSlot.objects.all()
+
+    slots = TimeSlot.objects.all().order_by(
+        "start_time"
+    )
 
     data = []
 
     for slot in slots:
 
-        items = ChecklistItem.objects.filter(slot=slot)
+        items = ChecklistItem.objects.filter(
+            slot=slot
+        ).order_by("id")
 
         row_items = []
 
@@ -387,6 +432,8 @@ def admin_store(request, store_id, date):
             "data": data
         }
     )
+
+
 
 def manage_checklist(request):
 
