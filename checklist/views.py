@@ -56,7 +56,7 @@ def dashboard(request):
     try:
         #delete_old_reports()
 
-        all_slots = TimeSlot.objects.all()
+        all_slots = TimeSlot.objects.all().order_by("start_time")
 
         if "store_id" not in request.session:
             return redirect("/")
@@ -406,7 +406,7 @@ def manage_checklist(request):
 
         return redirect("/manage-checklist/")
 
-    slots = TimeSlot.objects.all()
+    slots = TimeSlot.objects.all().order_by("start_time")
 
     return render(
         request,
