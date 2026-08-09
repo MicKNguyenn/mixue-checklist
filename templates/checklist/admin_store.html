@@ -50,23 +50,19 @@ img{
 
 <div class="phone">
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex gap-2 mb-3">
 
     <a
         href="/admin-day/{{ selected_date|date:'Y-m-d' }}/"
         class="btn btn-outline-dark">
-
         ← Quay lại
-
     </a>
 
     <button
         type="button"
         id="approveAllBtn"
         class="btn btn-success">
-
-        ✓ Duyệt tất cả đạt
-
+        ✓ Duyệt tất cả
     </button>
 
 </div>
@@ -189,108 +185,49 @@ img{
 
 </div>
 </div>
-<script>
 
-document.querySelectorAll(".review-form").forEach(form => {
-
-    form.addEventListener("submit", async function(e) {
-
-        e.preventDefault();
-
-        const btn = form.querySelector(".save-btn");
-
-        // tránh double click
-        btn.disabled = true;
-        btn.innerHTML = "Đang lưu...";
-
-        try {
-
-            const formData = new FormData(form);
-
-            const res = await fetch(window.location.href, {
-                method: "POST",
-                body: formData,
-                headers: {
-                    "X-Requested-With": "XMLHttpRequest"
-                }
-            });
-
-            const data = await res.json();
-
-            if (data.success) {
-
-                btn.classList.remove("btn-primary");
-                btn.classList.add("btn-success");
-                btn.innerHTML = "✓ Đã lưu";
-
-                setTimeout(() => {
-                    resetButton(btn);
-                }, 1200);
-
-            } else {
-                resetButton(btn);
-                alert("Lưu thất bại!");
-            }
-
-        } catch (err) {
-
-            console.log(err);
-            resetButton(btn);
-            alert("Có lỗi xảy ra!");
-
-        }
-
-    });
-
-});
-
-function resetButton(btn) {
-    btn.disabled = false;
-    btn.classList.remove("btn-success");
-    btn.classList.add("btn-primary");
-    btn.innerHTML = "Lưu đánh giá";
-}
-
-</script>
 <script>
 
 document.getElementById("approveAllBtn").addEventListener("click", async function () {
 
-    const btn = this;
-
-    const confirmed = confirm(
-        "Bạn có chắc muốn đánh dấu TẤT CẢ checklist đã báo cáo là ĐẠT không?"
-    );
-
-    if (!confirmed) {
+    if (!confirm(
+        "Duyệt tất cả checklist đã chụp thành ĐẠT?\n\n" +
+        "• Checklist đang chờ duyệt → Đạt\n" +
+        "• Checklist Không đạt → giữ nguyên\n" +
+        "• Checklist chưa chụp → giữ nguyên"
+    )) {
         return;
     }
 
+    const btn = this;
+
     btn.disabled = true;
-    btn.innerHTML = "⏳ Đang duyệt...";
+    btn.innerHTML = "Đang duyệt...";
 
     try {
 
         const formData = new FormData();
 
-        formData.append("approve_all", "1");
+        formData.append(
+            "action",
+            "approve_all"
+        );
 
-        const csrfToken = document.querySelector(
-            '[name=csrfmiddlewaretoken]'
-        ).value;
+        formData.append(
+            "csrfmiddlewaretoken",
+            "{{ csrf_token }}"
+        );
 
-        const res = await fetch(window.location.href, {
-
-            method: "POST",
-
-            body: formData,
-
-            headers: {
-                "X-CSRFToken": csrfToken,
-                "X-Requested-With": "XMLHttpRequest"
+        const res = await fetch(
+            window.location.href,
+            {
+                method: "POST",
+                body: formData,
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
             }
-
-        });
+        );
 
         const data = await res.json();
 
@@ -300,19 +237,18 @@ document.getElementById("approveAllBtn").addEventListener("click", async functio
             btn.classList.add("btn-primary");
 
             btn.innerHTML =
-                `✓ Đã duyệt ${data.count} checklist`;
+                `✓ Đã duyệt ${data.updated} checklist`;
 
-            // reload để toàn bộ trạng thái trên trang cập nhật
+            // reload để status trên màn hình cập nhật
             setTimeout(() => {
-                window.location.reload();
-            }, 1000);
+                location.reload();
+            }, 800);
 
         } else {
 
+            alert("Duyệt thất bại!");
             btn.disabled = false;
-            btn.innerHTML = "✓ Duyệt tất cả đạt";
-
-            alert(data.message || "Duyệt thất bại!");
+            btn.innerHTML = "✓ Duyệt tất cả";
 
         }
 
@@ -320,11 +256,10 @@ document.getElementById("approveAllBtn").addEventListener("click", async functio
 
         console.log(err);
 
-        btn.disabled = false;
-        btn.innerHTML = "✓ Duyệt tất cả đạt";
-
         alert("Có lỗi xảy ra!");
 
+        btn.disabled = false;
+        btn.innerHTML = "✓ Duyệt tất cả";
     }
 
 });

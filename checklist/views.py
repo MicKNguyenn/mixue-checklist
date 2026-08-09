@@ -326,38 +326,45 @@ def admin_store(request, store_id, date):
         "%Y-%m-%d"
     ).date()
 
-    store = Store.objects.get(id=store_id)
+    store = get_object_or_404(
+        Store,
+        id=store_id
+    )
 
     # =========================
-    # AJAX UPDATE
+    # AJAX
     # =========================
     if request.method == "POST":
 
+        action = request.POST.get("action")
+
         # =========================
-        # DUYỆT TẤT CẢ CHECKLIST ĐÃ BÁO CÁO
+        # DUYỆT TẤT CẢ
+        # pending -> pass
+        # fail -> giữ nguyên
+        # pass -> giữ nguyên
+        # chưa chụp -> bỏ qua
         # =========================
-        if request.POST.get("approve_all") == "1":
+        if action == "approve_all":
 
             reports = Report.objects.filter(
                 store=store,
                 report_date=selected_date
-            ).exclude(
-                status="pass"
             )
 
-            count = reports.count()
-
-            reports.update(
+            updated = reports.filter(
+                status="pending"
+            ).update(
                 status="pass"
             )
 
             return JsonResponse({
                 "success": True,
-                "count": count
+                "updated": updated
             })
 
         # =========================
-        # UPDATE TỪNG CHECKLIST
+        # ĐÁNH GIÁ TỪNG CHECKLIST
         # =========================
         report_id = request.POST.get("report_id")
         status = request.POST.get("status")
@@ -373,7 +380,6 @@ def admin_store(request, store_id, date):
 
             report.status = status
             report.note = note
-
             report.save()
 
             return JsonResponse({
