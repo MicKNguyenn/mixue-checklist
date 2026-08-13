@@ -43,6 +43,11 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from django.http import HttpResponse
 from django.db.models import Avg, Count
+from django.http import HttpResponse
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
+from itertools import groupby
 
 from django.http import HttpResponse
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
@@ -2147,44 +2152,99 @@ def export_kpi_auditqc_excel(request):
     return response
 
 def export_audit_excel(request, audit_id):
-    audit = Audit.objects.get(id=audit_id)
-
+    audit = Audit.objects.select_related("store").get(id=audit_id)
     issues = audit.issues.select_related("item", "category").order_by("category__id")
 
     wb = Workbook()
     ws = wb.active
     ws.title = "Audit Report"
 
-    header_fill = PatternFill("solid", fgColor="1F4E79")
-    header_font = Font(color="FFFFFF", bold=True)
+    # Ensure grid lines are visible for a structured sheet look
+    ws.views.sheetView[0].showGridLines = True
 
-    green = PatternFill("solid", fgColor="C6EFCE")
-    red = PatternFill("solid", fgColor="FFC7CE")
+    # Premium Color Palette (Corporate Executive Theme)
+    primary_navy = "1F3864"       # Deep Executive Navy for headers
+    accent_blue = "2F5597"        # Secondary blue accent
+    light_bg = "F9FBFD"           # Subtle cool background tint
+    border_color = "D9D9D9"       # Soft grey border
 
+    # Fonts
+    font_family = "Segoe UI"
+    title_font = Font(name=font_family, size=15, bold=True, color=primary_navy)
+    header_font = Font(name=font_family, size=11, bold=True, color="FFFFFF")
+    meta_label_font = Font(name=font_family, size=10, bold=True, color="595959")
+    meta_val_font = Font(name=font_family, size=10, bold=True, color="262626")
+    row_font = Font(name=font_family, size=10, color="000000")
+    category_font = Font(name=font_family, size=10, bold=True, color=primary_navy)
+
+    # Status Colors (Softer, modern tones)
+    green_fill = PatternFill("solid", fgColor="E2EFDA")
+    green_font = Font(name=font_family, size=10, bold=True, color="375623")
+
+    red_fill = PatternFill("solid", fgColor="FCE4D6")
+    red_font = Font(name=font_family, size=10, bold=True, color="C65911")
+
+    yellow_fill = PatternFill("solid", fgColor="FFF2CC")
+    yellow_font = Font(name=font_family, size=10, bold=True, color="806000")
+
+    header_fill = PatternFill("solid", fgColor=primary_navy)
+    meta_bg = PatternFill("solid", fgColor="F2F2F2")
+
+    # Alignments & Borders
     center = Alignment(horizontal="center", vertical="center", wrap_text=True)
     left = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    
+    thin_side = Side(style="thin", color=border_color)
+    border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
 
-    border = Border(
-        left=Side(style="thin"),
-        right=Side(style="thin"),
-        top=Side(style="thin"),
-        bottom=Side(style="thin"),
-    )
+    ws.row_dimensions[1].height = 35
+    ws["A1"] = "BÁO CÁO ĐÁNH GIÁ CHẤT LƯỢNG (QC AUDIT)"
+    ws["A1"].font = title_font
+    ws["A1"].alignment = Alignment(horizontal="left", vertical="center")
+    ws.merge_cells("A1:E1")
 
-    # HEADER
-    ws["A1"] = "BÁO CÁO AUDIT QC"
-    ws["A1"].font = Font(size=16, bold=True)
+    # Metadata Card styling (Store code & time)
+    ws.row_dimensions[3].height = 22
+    ws.row_dimensions[4].height = 22
 
-    ws["A3"] = "Mã cửa hàng:"
+    ws["A3"] = "MÃ CỬA HÀNG"
+    ws["A3"].font = meta_label_font
+    ws["A3"].fill = meta_bg
+    ws["A3"].alignment = center
+    ws["A3"].border = border
+
     ws["B3"] = audit.store.code
+    ws["B3"].font = meta_val_font
+    ws["B3"].alignment = center
+    ws["B3"].border = border
 
-    ws["A4"] = "Ngày chấm:"
-    ws["B4"] = audit.created_at.strftime("%d/%m/%Y %H:%M")
+    ws["A4"] = "THỜI GIAN CHẤM"
+    ws["A4"].font = meta_label_font
+    ws["A4"].fill = meta_bg
+    ws["A4"].alignment = center
+    ws["A4"].border = border
 
-    ws["A6"] = "TỔNG ĐIỂM (QC):"
+    local_time = timezone.localtime(audit.created_at).strftime("%d/%m/%Y %H:%M") if audit.created_at else "-"
+    ws["B4"] = local_time
+    ws["B4"].font = meta_val_font
+    ws["B4"].alignment = center
+    ws["B4"].border = border
 
-    headers = ["Danh mục", "Hạng mục", "Trạng thái", "Điểm trừ", "Nội dung"]
+    # Total Score KPI Box
+    ws["A6"] = "TỔNG ĐIỂM QC"
+    ws["A6"].font = Font(name=font_family, size=11, bold=True, color="FFFFFF")
+    ws["A6"].fill = PatternFill("solid", fgColor=accent_blue)
+    ws["A6"].alignment = center
+    ws["A6"].border = border
+    ws.row_dimensions[6].height = 26
+
+    score_cell = ws["B6"]
+    score_cell.border = border
+    score_cell.alignment = center
+
+    headers = ["Danh mục", "Hạng mục kiểm tra", "Trạng thái", "Điểm trừ", "Nội dung ghi chú / Chi tiết lỗi"]
     start_row = 8
+    ws.row_dimensions[start_row].height = 26
 
     for col, h in enumerate(headers, 1):
         c = ws.cell(start_row, col, h)
@@ -2194,44 +2254,45 @@ def export_audit_excel(request, audit_id):
         c.border = border
 
     row = start_row + 1
-    category_map = {}
-    current_cat = None
     total_deduct = 0
 
-    # GROUP chắc chắn đúng
-    from itertools import groupby
-
     for category, group in groupby(issues, key=lambda x: x.category.title if x.category else "-"):
-
         category_start = row
 
         for issue in group:
             item = issue.item.title if issue.item else "-"
-
             score = getattr(issue, "deduct_score", 0) or 0
             total_deduct += score
 
             if issue.status == "pass":
                 status = "ĐẠT"
-                fill = green
+                fill_cell = green_fill
+                font_cell = green_font
             else:
                 status = "KHÔNG ĐẠT"
-                fill = red
+                fill_cell = red_fill
+                font_cell = red_font
 
-            ws.cell(row, 1, category if row == category_start else None)
-            ws.cell(row, 2, item)
+            ws.row_dimensions[row].height = 22
 
+            c1 = ws.cell(row, 1, category if row == category_start else None)
+            c2 = ws.cell(row, 2, item)
             c3 = ws.cell(row, 3, status)
-            c4 = ws.cell(row, 4, score)
+            c4 = ws.cell(row, 4, score if score > 0 else "-")
             c5 = ws.cell(row, 5, issue.note or "")
 
-            c3.fill = fill
+            c1.font = category_font
+            c2.font = row_font
+            c3.font = font_cell
+            c4.font = row_font
+            c5.font = row_font
 
-            for col in range(1, 6):
-                cell = ws.cell(row, col)
+            c3.fill = fill_cell
+
+            for col_idx in range(1, 6):
+                cell = ws.cell(row, col_idx)
                 cell.border = border
-
-                if col in [3, 4]:
+                if col_idx in [3, 4]:
                     cell.alignment = center
                 else:
                     cell.alignment = left
@@ -2239,45 +2300,33 @@ def export_audit_excel(request, audit_id):
             row += 1
 
         category_end = row - 1
-
         if category_start != category_end:
-            ws.merge_cells(
-                start_row=category_start,
-                start_column=1,
-                end_row=category_end,
-                end_column=1
-            )
-
+            ws.merge_cells(start_row=category_start, start_column=1, end_row=category_end, end_column=1)
             ws.cell(category_start, 1).alignment = center
 
-    # SCORE
     final_score = 200 - total_deduct
-    ws["B6"] = final_score
-
-    ws["B6"].alignment = center
-    ws["B6"].font = Font(size=14, bold=True)
+    score_cell.value = final_score
 
     if final_score < 150:
-        ws["B6"].fill = red
-
+        score_cell.fill = red_fill
+        score_cell.font = Font(name=font_family, size=12, bold=True, color="C65911")
     elif final_score < 165:
-        ws["B6"].fill = PatternFill("solid", fgColor="FFEB9C")
-
+        score_cell.fill = yellow_fill
+        score_cell.font = Font(name=font_family, size=12, bold=True, color="806000")
     else:
-        ws["B6"].fill = green
+        score_cell.fill = green_fill
+        score_cell.font = Font(name=font_family, size=12, bold=True, color="375623")
 
-    # WIDTH
-    ws.column_dimensions["A"].width = 22
-    ws.column_dimensions["B"].width = 45
+    ws.column_dimensions["A"].width = 24
+    ws.column_dimensions["B"].width = 42
     ws.column_dimensions["C"].width = 18
-    ws.column_dimensions["D"].width = 12
-    ws.column_dimensions["E"].width = 45
+    ws.column_dimensions["D"].width = 14
+    ws.column_dimensions["E"].width = 48
 
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
-    response["Content-Disposition"] = f'attachment; filename="MX_{audit.store.code}.xlsx"'
+    response["Content-Disposition"] = f'attachment; filename="QC_Audit_{audit.store.code}.xlsx"'
     wb.save(response)
 
     return response
